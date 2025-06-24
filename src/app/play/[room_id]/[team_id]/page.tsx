@@ -14,10 +14,29 @@ interface Team {
   position?: number;
 }
 
+// Definir tipo GameState y DiceResult para tipado estricto
+interface DiceResult {
+  team_id: string;
+  value: number;
+}
+
+interface GameState {
+  current_turn_team?: string;
+  current_category?: string;
+  current_word?: string;
+  current_phase?: string;
+  dice_value?: number;
+  dice_result?: DiceResult;
+  winning_team?: string;
+  is_active?: boolean;
+  is_all_play?: boolean;
+  // Agrega aquí más campos si los usas
+}
+
 export default function PlayPage({ params }: { params: { room_id: string; team_id: string } }) {
   const { room_id, team_id } = params;
   const [teams, setTeams] = useState<Team[]>([]);
-  const [gameState, setGameState] = useState<Record<string, unknown> | null>(null);
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWord, setShowWord] = useState(false);
   const [showStartRound, setShowStartRound] = useState(false);
@@ -90,9 +109,7 @@ export default function PlayPage({ params }: { params: { room_id: string; team_i
 
   const currentTeam = teams.find(t => t.id === gameState.current_turn_team);
   const isMyTurn = gameState.current_turn_team == team_id;
-
-  // Determinar si todos juegan
-  const isAllPlay = (gameState as any)?.is_all_play;
+  const isAllPlay = gameState.is_all_play;
 
   // Lógica de UI según current_phase
   if (gameState.current_phase === 'waiting') {
@@ -109,7 +126,9 @@ export default function PlayPage({ params }: { params: { room_id: string; team_i
       <div className="flex flex-col items-center justify-center min-h-screen p-8">
         <div className="flex flex-row gap-8 items-center">
           <div className="border rounded-lg p-8 bg-white shadow text-2xl min-w-[220px] min-h-[80px] flex items-center justify-center">
-            {showWord ? (gameState.current_word || <span className="italic text-gray-400">(Sin palabra)</span>) : <span className="italic text-gray-400">Palabra oculta</span>}
+            {showWord
+              ? (gameState.current_word ? gameState.current_word : <span className="italic text-gray-400">(Sin palabra)</span>)
+              : <span className="italic text-gray-400">Palabra oculta</span>}
           </div>
           <button
             className="ml-4 p-2 bg-blue-100 rounded-full border hover:bg-blue-200"
