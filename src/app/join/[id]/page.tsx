@@ -29,6 +29,15 @@ function getRandomIcon(currentIcon?: string) {
   return filtered[Math.floor(Math.random() * filtered.length)];
 }
 
+// Definir un tipo Team mínimo para tipar correctamente
+interface Team {
+  id: string;
+  name: string;
+  icon_url?: string;
+  members?: string[] | string;
+  position?: number;
+}
+
 export default function JoinPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
@@ -40,6 +49,8 @@ export default function JoinPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [gameState, setGameState] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (!id || id.length !== 6) {

@@ -26,6 +26,7 @@ export default function HostPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
   const [teams, setTeams] = useState<Team[]>([]);
+  const [gameState, setGameState] = useState<Record<string, unknown> | null>(null);
 
   // Configuración de partida
   const [duration, setDuration] = useState<'corta' | 'media' | 'larga'>('media');

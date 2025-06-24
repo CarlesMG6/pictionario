@@ -5,27 +5,20 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabaseClient';
 import { GameLogic } from '@/utils/GameLogic';
 
-interface GameState {
-  room_id: string;
-  current_turn_team: string;
-  current_phase: string;
-  is_active: boolean;
-  current_word?: string;
-  is_all_play?: boolean;
-  dice_value?: number;
-}
-
+// Definir un tipo Team mínimo para tipar correctamente
 interface Team {
   id: string;
   name: string;
   icon_url?: string;
+  members?: string[] | string;
+  position?: number;
 }
 
 export default function PlayPage({ params }: { params: { room_id: string; team_id: string } }) {
   const router = useRouter();
   const { room_id, team_id } = params;
-  const [gameState, setGameState] = useState<GameState | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [gameState, setGameState] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWord, setShowWord] = useState(false);
   const [showStartRound, setShowStartRound] = useState(false);
