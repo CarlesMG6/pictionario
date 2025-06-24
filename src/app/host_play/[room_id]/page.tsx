@@ -19,9 +19,18 @@ const BOARD_SIZES = {
   larga: 55,
 };
 
+// Definir un tipo Team mínimo para tipar correctamente
+interface Team {
+  id: string;
+  name: string;
+  icon_url?: string;
+  members?: string[] | string;
+  position?: number;
+}
+
 export default function HostPlayPage({ params }: { params: { room_id: string } }) {
   const { room_id } = params;
-  const [teams, setTeams] = useState<any[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [gameState, setGameState] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [board, setBoard] = useState<string[]>([]);
