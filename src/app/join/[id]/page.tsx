@@ -30,6 +30,7 @@ function getRandomIcon(currentIcon?: string) {
 }
 
 // Definir un tipo Team mínimo para tipar correctamente
+/*
 interface Team {
   id: string;
   name: string;
@@ -37,6 +38,7 @@ interface Team {
   members?: string[] | string;
   position?: number;
 }
+*/
 
 export default function JoinPage({ params }: { params: { id: string } }) {
   const router = useRouter();

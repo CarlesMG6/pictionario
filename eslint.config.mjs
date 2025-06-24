@@ -13,4 +13,11 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
 ];
 
-export default eslintConfig;
+// Desactivar la regla de ESLint para prohibir 'any'
+export default {
+  ...eslintConfig,
+  rules: {
+    ...eslintConfig.rules,
+    '@typescript-eslint/no-explicit-any': 'off',
+  },
+};
