@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabaseClient';
 import { GameLogic } from '@/utils/GameLogic';
+import Image from 'next/image';
 
-// Definir un tipo Team mínimo para tipar correctamente
+// Definir tipo Team y tipar correctamente
 interface Team {
   id: string;
   name: string;
@@ -15,7 +15,6 @@ interface Team {
 }
 
 export default function PlayPage({ params }: { params: { room_id: string; team_id: string } }) {
-  const router = useRouter();
   const { room_id, team_id } = params;
   const [teams, setTeams] = useState<Team[]>([]);
   const [gameState, setGameState] = useState<Record<string, unknown> | null>(null);
@@ -233,7 +232,7 @@ export default function PlayPage({ params }: { params: { room_id: string; team_i
           Es turno de: {currentTeam ? (
             <span className="inline-flex items-center gap-2">
               {currentTeam.icon_url && (
-                <img src={currentTeam.icon_url} alt="icono" className="inline w-8 h-8 rounded-full border" />
+                <Image src={currentTeam.icon_url} alt="icono" className="inline w-8 h-8 rounded-full border" width={32} height={32} />
               )}
               <span>{currentTeam.name}</span>
             </span>

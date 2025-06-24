@@ -28,7 +28,7 @@ export class GameLogic {
     const { data: teams } = await supabase.from('teams').select('id').eq('room_id', room_id).order('position');
     if (!teams || teams.length === 0) return;
     // Calcular siguiente equipo
-    const idx = teams.findIndex((t: any) => t.id === state.current_turn_team);
+    const idx = teams.findIndex((t: { id: string }) => t.id === state.current_turn_team);
     const nextIdx = (idx + 1) % teams.length;
     const nextTeam = teams[nextIdx];
     // Calcular categoría y palabra

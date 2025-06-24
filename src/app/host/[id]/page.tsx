@@ -47,28 +47,26 @@ export default function HostPage({ params }: { params: { id: string } }) {
     // Obtener room_id (uuid) por code
     let roomUuid: string | null = null;
     let channel: any = null;
-    let mounted = true;
     async function fetchRoomAndTeams() {
       const { data: room } = await supabase.from('rooms').select('id').eq('code', id).single();
       if (!room) return;
       roomUuid = room.id;
       // Cargar equipos iniciales
       const { data: teamList } = await supabase.from('teams').select('*').eq('room_id', roomUuid).order('position');
-      if (mounted) setTeams(teamList || []);
+      setTeams(teamList || []);
       // Suscribirse a realtime solo si no existe ya el canal
       if (!channel) {
         channel = supabase
           .channel(`room-${roomUuid}`)
           .on('broadcast', { event: 'team_join' }, async () => {
             const { data: updatedTeams } = await supabase.from('teams').select('*').eq('room_id', roomUuid).order('position');
-            if (mounted) setTeams(updatedTeams || []);
+            setTeams(updatedTeams || []);
           })
           .subscribe();
       }
     }
     fetchRoomAndTeams();
     return () => {
-      mounted = false;
       if (channel) supabase.removeChannel(channel);
     };
   }, [id, router]);
