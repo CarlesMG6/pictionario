@@ -19,8 +19,8 @@ const BOARD_SIZES = {
   larga: 55,
 };
 
-export default function HostPlayPage({ params }: { params: Promise<{ room_id: string }> }) {
-  const { room_id } = React.use(params);
+export default function HostPlayPage({ params }: { params: { room_id: string } }) {
+  const { room_id } = params;
   const [teams, setTeams] = useState<any[]>([]);
   const [gameState, setGameState] = useState<any>(null);
   const [loading, setLoading] = useState(true);

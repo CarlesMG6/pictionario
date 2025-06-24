@@ -21,9 +21,9 @@ const CATEGORIES = [
   { key: 'movies', label: 'Películas o series' },
 ];
 
-export default function HostPage({ params }: { params: Promise<{ id: string }> }) {
+export default function HostPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { id } = React.use(params);
+  const { id } = params;
   const [teams, setTeams] = useState<any[]>([]);
 
   // Configuración de partida

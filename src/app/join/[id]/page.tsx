@@ -29,9 +29,9 @@ function getRandomIcon(currentIcon?: string) {
   return filtered[Math.floor(Math.random() * filtered.length)];
 }
 
-export default function JoinPage({ params }: { params: Promise<{ id: string }> }) {
+export default function JoinPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { id } = React.use(params);
+  const { id } = params;
 
   const [icon, setIcon] = useState(() => getRandomIcon());
   const [teamName, setTeamName] = useState('');

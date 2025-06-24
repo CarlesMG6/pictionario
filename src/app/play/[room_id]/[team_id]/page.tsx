@@ -21,10 +21,9 @@ interface Team {
   icon_url?: string;
 }
 
-export default function PlayPage({ params }: { params: Promise<{ room_id: string; team_id: string }> }) {
+export default function PlayPage({ params }: { params: { room_id: string; team_id: string } }) {
   const router = useRouter();
-  const [room_id, setRoomId] = useState<string | null>(null);
-  const [team_id, setTeamId] = useState<string | null>(null);
+  const { room_id, team_id } = params;
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,15 +66,6 @@ export default function PlayPage({ params }: { params: Promise<{ room_id: string
   };
 
   useEffect(() => {
-    (async () => {
-      const resolved = await params;
-      setRoomId(resolved.room_id);
-      setTeamId(resolved.team_id);
-    })();
-  }, [params]);
-
-  useEffect(() => {
-    if (!room_id) return;
     fetchGameState();
     const channel = supabase
       .channel(`room-${room_id}`)
