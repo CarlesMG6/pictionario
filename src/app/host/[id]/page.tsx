@@ -36,7 +36,7 @@ export default function HostPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
   const [teams, setTeams] = useState<Team[]>([]);
-  const [gameState, setGameState] = useState<GameState | null>(null);
+//  const [gameState, setGameState] = useState<GameState | null>(null);
 
   // Configuración de partida
   const [duration, setDuration] = useState<'corta' | 'media' | 'larga'>('media');
@@ -139,7 +139,7 @@ export default function HostPage({ params }: { params: { id: string } }) {
               <div key={team.id || team.name || idx} className="flex items-start gap-3 p-3 rounded border border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800">
                 <Image src={team.icon_url || '/vercel.svg'} alt="icono equipo" width={32} height={32} className="mt-1" />
                 <div>
-                  <div className="font-bold text-lg">{(team as any).name}</div>
+                  <div className="font-bold text-lg">{team.name}</div>
                   {team.participants ? (
                     <div className="text-sm text-gray-600 dark:text-gray-300">{Array.isArray(team.participants) ? team.participants.join(', ') : team.participants}</div>
                   ) : null}
