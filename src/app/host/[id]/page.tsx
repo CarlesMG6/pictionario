@@ -34,7 +34,7 @@ interface GameState {
 }
 */
 
-export default function HostPage({ params }: { params: { id: string } }) {
+export default function Page({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
   const [teams, setTeams] = useState<Team[]>([]);
