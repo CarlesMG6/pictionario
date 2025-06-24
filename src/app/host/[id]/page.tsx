@@ -23,6 +23,7 @@ interface Team {
 }
 
 // Definir un tipo GameState mínimo para tipar correctamente
+/*
 interface GameState {
   current_turn_team?: string;
   current_category?: string;
@@ -31,6 +32,7 @@ interface GameState {
   dice_value?: number;
   // Agrega aquí más campos si los usas
 }
+*/
 
 export default function HostPage({ params }: { params: { id: string } }) {
   const router = useRouter();
