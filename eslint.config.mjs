@@ -9,15 +9,12 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-];
+// Usar compat.extends para obtener los extends como array
+const extendsArr = compat.extends("next/core-web-vitals", "next/typescript");
 
-// Desactivar la regla de ESLint para prohibir 'any'
 export default {
-  ...eslintConfig,
+  extends: extendsArr.map(e => (typeof e === 'string' ? e : e.extends)).flat(),
   rules: {
-    ...eslintConfig.rules,
     '@typescript-eslint/no-explicit-any': 'off',
   },
 };

@@ -34,12 +34,7 @@ interface GameState {
 }
 */
 
-// Si existe un tipo PageProps global, se puede importar así:
-// import type { PageProps } from 'next';
-// Pero en Next.js App Router, el tipo correcto es:
-type HostPageProps = { params: { id: string } };
-
-export default function HostPage({ params }: HostPageProps) {
+export default function HostPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
   const [teams, setTeams] = useState<Team[]>([]);
