@@ -28,10 +28,20 @@ interface Team {
   position?: number;
 }
 
+// Definir un tipo GameState mínimo para tipar correctamente
+interface GameState {
+  current_turn_team?: string;
+  current_category?: string;
+  current_word?: string;
+  current_phase?: string;
+  dice_value?: number;
+  // Agrega aquí más campos si los usas
+}
+
 export default function HostPlayPage({ params }: { params: { room_id: string } }) {
   const { room_id } = params;
   const [teams, setTeams] = useState<Team[]>([]);
-  const [gameState, setGameState] = useState<any>(null);
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [board, setBoard] = useState<string[]>([]);
   const boardRef = useRef<string[]>([]); // <-- referencia siempre actualizada
