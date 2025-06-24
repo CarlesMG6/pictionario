@@ -179,7 +179,7 @@ export default function HostPlayPage({ params }: { params: { room_id: string } }
   }, [room_id]);
 
   // Lógica para tirar dado
-  const handleRollDice = async (teamId: string) => {
+  /*const handleRollDice = async (teamId: string) => {
     const value = Math.floor(Math.random() * 6) + 1;
     setDiceRolling({ teamId, value });
     // Actualizar posición en teams
@@ -208,6 +208,7 @@ export default function HostPlayPage({ params }: { params: { room_id: string } }
     });
     await supabase.channel(`room-${room_id}`).send({ type: "broadcast", event: "update_match", payload: {} });
   };
+*/
 
   // Calcula la posición visual de una casilla en el tablero en forma de S
   function getSBoardPosition(index: number, cols = 7, rowsPerZigzag = 2) {

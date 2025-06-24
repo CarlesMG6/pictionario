@@ -49,8 +49,8 @@ export default function JoinPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [teamId, setTeamId] = useState<string | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [gameState, setGameState] = useState<Record<string, unknown> | null>(null);
+  //const [teams, setTeams] = useState<Team[]>([]);
+  //const [gameState, setGameState] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (!id || id.length !== 6) {
@@ -122,7 +122,7 @@ export default function JoinPage({ params }: { params: { id: string } }) {
   React.useEffect(() => {
     let roomUuid: string | null = null;
     let channel: any = null;
-    let mounted = true;
+    //let mounted = true;
     async function subscribeMatchStarts() {
       const { data: room } = await supabase.from('rooms').select('id').eq('code', id).single();
       if (!room) return;
