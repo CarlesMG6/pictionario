@@ -22,11 +22,21 @@ interface Team {
   participants?: string[] | string;
 }
 
+// Definir un tipo GameState mínimo para tipar correctamente
+interface GameState {
+  current_turn_team?: string;
+  current_category?: string;
+  current_word?: string;
+  current_phase?: string;
+  dice_value?: number;
+  // Agrega aquí más campos si los usas
+}
+
 export default function HostPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
   const [teams, setTeams] = useState<Team[]>([]);
-  const [gameState, setGameState] = useState<Record<string, unknown> | null>(null);
+  const [gameState, setGameState] = useState<GameState | null>(null);
 
   // Configuración de partida
   const [duration, setDuration] = useState<'corta' | 'media' | 'larga'>('media');
