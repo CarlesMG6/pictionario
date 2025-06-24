@@ -3,9 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import Image from "next/image";
+import { supabase } from '@/supabaseClient';
 
 function generateRoomId() {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let id = '';
   for (let i = 0; i < 6; i++) {
     id += chars[Math.floor(Math.random() * chars.length)];
@@ -20,14 +21,27 @@ export default function Home() {
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     const id = generateRoomId();
+    const code = id;
+    await supabase.from('rooms').insert([{ code }]);
     router.push(`/host/${id}`);
   };
 
-  const handleJoinRoom = () => {
+  const handleJoinRoom = async () => {
     if (!/^[a-zA-Z0-9]{6}$/.test(joinCode)) {
       setError('Introduce un código válido de 6 caracteres.');
+      return;
+    }
+    // Comprobar si existe la sala en Supabase
+    const { data, error: dbError } = await supabase.from('rooms').select('code').eq('code', joinCode).single();
+    if (dbError || !data) {
+      setError('No existe ninguna sala con ese código.');
+      setTimeout(() => {
+        setShowModal(false);
+        setError('');
+        router.push('/');
+      }, 1500);
       return;
     }
     setError('');

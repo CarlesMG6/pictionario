@@ -1,8 +1,10 @@
 "use client";
 
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { supabase } from '@/supabaseClient';
 
 const ICONS = [
   '/player-icons/bird2.png',
@@ -27,15 +29,17 @@ function getRandomIcon(currentIcon?: string) {
   return filtered[Math.floor(Math.random() * filtered.length)];
 }
 
-export default function JoinPage({ params }: { params: { id: string } }) {
+export default function JoinPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const { id } = params;
+  const { id } = React.use(params);
 
   const [icon, setIcon] = useState(() => getRandomIcon());
   const [teamName, setTeamName] = useState('');
   const [memberInput, setMemberInput] = useState('');
   const [members, setMembers] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
+  const [teamId, setTeamId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id || id.length !== 6) {
@@ -66,7 +70,7 @@ export default function JoinPage({ params }: { params: { id: string } }) {
     setMembers(members.filter(m => m !== name));
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!teamName.trim()) {
       setError('Introduce un nombre de equipo.');
       return;
@@ -76,9 +80,81 @@ export default function JoinPage({ params }: { params: { id: string } }) {
       return;
     }
     setError('');
-    // Aquí iría la lógica para unirse a la sala
-    // router.push(...)
+    // Buscar la sala por código para obtener el room_id (uuid)
+    const { data: room, error: roomError } = await supabase.from('rooms').select('id').eq('code', id).single();
+    if (roomError || !room) {
+      setError('No se ha encontrado la sala.');
+      return;
+    }
+    // Insertar el equipo en la tabla teams
+    const { data: inserted, error: teamError } = await supabase.from('teams').insert([
+      {
+        room_id: room.id,
+        name: teamName,
+        icon_url: icon,
+        position: 0,
+      }
+    ]).select();
+    if (teamError || !inserted || !inserted[0]) {
+      setError('Error al registrar el equipo.');
+      return;
+    }
+    // Guardar el id del equipo en localStorage y en estado para esta ventana
+    localStorage.setItem(`team_id_${room.id}`, inserted[0].id);
+    setTeamId(inserted[0].id);
+    // Lanzar evento realtime team_join
+    await supabase.channel(`room-${room.id}`)
+      .send({ type: 'broadcast', event: 'team_join', payload: { team: teamName } });
+    setConfirmed(true);
   };
+
+  React.useEffect(() => {
+    let roomUuid: string | null = null;
+    let channel: any = null;
+    let mounted = true;
+    async function subscribeMatchStarts() {
+      const { data: room } = await supabase.from('rooms').select('id').eq('code', id).single();
+      if (!room) return;
+      roomUuid = room.id;
+      channel = supabase
+        .channel(`room-${roomUuid}`)
+        .on('broadcast', { event: 'match_starts' }, async () => {
+          // Prioriza el teamId de esta ventana, si existe
+          const myTeamId = teamId || localStorage.getItem(`team_id_${roomUuid}`);
+          if (myTeamId) {
+            router.push(`/play/${roomUuid}/${myTeamId}`);
+          }
+        })
+        .subscribe();
+    }
+    subscribeMatchStarts();
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [id, router, teamId]);
+
+  if (confirmed) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8">
+        <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-8 flex flex-col items-center w-full max-w-md">
+          <div className="text-2xl font-bold mb-4 text-center text-green-700 dark:text-green-400">Todo preparado, esperando que comience la partida</div>
+          <div className="mb-6 flex flex-col items-center">
+            <div className="rounded-full border-4 border-blue-400 bg-white dark:bg-neutral-900 flex items-center justify-center mb-2" style={{ width: 112, height: 112, padding: 8 }}>
+              <Image src={icon} alt="icono equipo" width={96} height={96} className="object-contain" />
+            </div>
+            <div className="font-bold text-xl mb-1">{teamName}</div>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {members.map(name => (
+                <span key={name} className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-sm">
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8">

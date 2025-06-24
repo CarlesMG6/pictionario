@@ -1,8 +1,10 @@
 "use client";
 
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { supabase } from '@/supabaseClient';
 
 const TEAM_ICONS = [
   '/vercel.svg', // Puedes cambiar estos iconos por otros en public/
@@ -19,23 +21,10 @@ const CATEGORIES = [
   { key: 'movies', label: 'Películas o series' },
 ];
 
-export default function HostPage({ params }: { params: { id: string } }) {
+export default function HostPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const { id } = params;
-
-  // Simulación de equipos (en producción vendría de backend/socket)
-  const [teams, setTeams] = useState([
-    {
-      name: 'Equipo Azul',
-      icon: TEAM_ICONS[0],
-      participants: ['Ana', 'Luis'],
-    },
-    {
-      name: 'Equipo Rojo',
-      icon: TEAM_ICONS[1],
-      participants: ['Marta'],
-    },
-  ]);
+  const { id } = React.use(params);
+  const [teams, setTeams] = useState<any[]>([]);
 
   // Configuración de partida
   const [duration, setDuration] = useState<'corta' | 'media' | 'larga'>('media');
@@ -51,11 +40,78 @@ export default function HostPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (!id || id.length !== 6) {
       router.replace('/');
+      return;
     }
+    // Obtener room_id (uuid) por code
+    let roomUuid: string | null = null;
+    let channel: any = null;
+    let mounted = true;
+    async function fetchRoomAndTeams() {
+      const { data: room } = await supabase.from('rooms').select('id').eq('code', id).single();
+      if (!room) return;
+      roomUuid = room.id;
+      // Cargar equipos iniciales
+      const { data: teamList } = await supabase.from('teams').select('*').eq('room_id', roomUuid).order('position');
+      if (mounted) setTeams(teamList || []);
+      // Suscribirse a realtime solo si no existe ya el canal
+      if (!channel) {
+        channel = supabase
+          .channel(`room-${roomUuid}`)
+          .on('broadcast', { event: 'team_join' }, async () => {
+            const { data: updatedTeams } = await supabase.from('teams').select('*').eq('room_id', roomUuid).order('position');
+            if (mounted) setTeams(updatedTeams || []);
+          })
+          .subscribe();
+      }
+    }
+    fetchRoomAndTeams();
+    return () => {
+      mounted = false;
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [id, router]);
 
   const handleCategoryToggle = (key: string) => {
     setCategories((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleStartGame = async () => {
+    // 1. Obtener room_id
+    const { data: room, error: roomError } = await supabase.from('rooms').select('id').eq('code', id).single();
+    if (roomError || !room) return;
+    const room_id = room.id;
+    // 2. Actualizar datos de la partida en rooms
+    const selectedCategories = Object.keys(categories).filter(key => categories[key]);
+    await supabase.from('rooms').update({
+      duration,
+      round_time: parseInt(roundTime, 10),
+      categories: selectedCategories
+    }).eq('id', room_id);
+    // 3. Obtener primer equipo (ahora aleatorio)
+    const { data: teamList } = await supabase.from('teams').select('id').eq('room_id', room_id).order('position');
+    let firstTeamId = null;
+    if (teamList && teamList.length > 0) {
+      const randomIdx = Math.floor(Math.random() * teamList.length);
+      firstTeamId = teamList[randomIdx].id;
+    }
+    // 4. Crear registro en game_state
+    //log 
+    console.log('Iniciando partida para room_id:', room_id, 'con primer equipo:', firstTeamId);
+    await supabase.from('game_state').insert([
+      {
+        room_id,
+        current_turn_team: firstTeamId,
+        current_phase: 'play',
+        current_word: null,
+        dice_value: null,
+        is_active: true
+      }
+    ]);
+    // 5. Lanzar evento realtime 'match_starts'
+    await supabase.channel(`room-${room_id}`)
+      .send({ type: 'broadcast', event: 'match_starts', payload: {} });
+    // 6. Redirigir a la pantalla de juego del host
+    router.push(`/host_play/${room_id}`);
   };
 
   return (
@@ -70,16 +126,20 @@ export default function HostPage({ params }: { params: { id: string } }) {
           <h2 className="text-2xl font-semibold mb-4">Equipos</h2>
           <div className="flex flex-col gap-4 mb-6">
             {teams.map((team, idx) => (
-              <div key={team.name} className="flex items-start gap-3 p-3 rounded border border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800">
-                <Image src={team.icon} alt="icono equipo" width={32} height={32} className="mt-1" />
+              <div key={team.id || team.name || idx} className="flex items-start gap-3 p-3 rounded border border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800">
+                <Image src={team.icon_url || '/vercel.svg'} alt="icono equipo" width={32} height={32} className="mt-1" />
                 <div>
                   <div className="font-bold text-lg">{team.name}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-300">{team.participants.join(', ')}</div>
+                  {team.participants ? (
+                    <div className="text-sm text-gray-600 dark:text-gray-300">{Array.isArray(team.participants) ? team.participants.join(', ') : team.participants}</div>
+                  ) : null}
                 </div>
               </div>
             ))}
           </div>
-          <button className="mt-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded transition-colors text-lg">Empezar partida</button>
+          <button className="mt-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded transition-colors text-lg" onClick={handleStartGame}>
+            Empezar partida
+          </button>
         </div>
         {/* Columna configuración */}
         <div className="flex-1 bg-white dark:bg-neutral-900 rounded-lg shadow p-6 min-w-[260px]">
