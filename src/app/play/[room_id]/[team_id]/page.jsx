@@ -1,42 +1,16 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/supabaseClient';
-import { GameLogic } from '@/utils/GameLogic';
+import { supabase } from '../../../../supabaseClient.js';
+import { GameLogic } from '../../../../utils/GameLogic';
 import Image from 'next/image';
 
-// Definir tipo Team y tipar correctamente
-interface Team {
-  id: string;
-  name: string;
-  icon_url?: string;
-  members?: string[] | string;
-  position?: number;
-}
-
-// Definir tipo GameState y DiceResult para tipado estricto
-interface DiceResult {
-  team_id: string;
-  value: number;
-}
-
-interface GameState {
-  current_turn_team?: string;
-  current_category?: string;
-  current_word?: string;
-  current_phase?: string;
-  dice_value?: number;
-  dice_result?: DiceResult;
-  winning_team?: string;
-  is_active?: boolean;
-  is_all_play?: boolean;
-  // Agrega aquí más campos si los usas
-}
-
-export default function PlayPage({ params }: { params: { room_id: string; team_id: string } }) {
-  const { room_id, team_id } = params;
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [gameState, setGameState] = useState<GameState | null>(null);
+export default function PlayPage({ params }) {
+  // Compatibilidad futura: unwrap params si es un Promise
+  const resolvedParams = typeof params?.then === 'function' ? React.use(params) : params;
+  const { room_id, team_id } = resolvedParams;
+  const [teams, setTeams] = useState([]);
+  const [gameState, setGameState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showWord, setShowWord] = useState(false);
   const [showStartRound, setShowStartRound] = useState(false);

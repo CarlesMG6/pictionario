@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { supabase } from "@/supabaseClient";
+import { supabase } from '../../../supabaseClient.js';
 import Image from "next/image";
 
 // Colores por categoría
-const CATEGORY_COLORS: Record<string, string> = {
+const CATEGORY_COLORS = {
   all: "#fbbf24", // amarillo
   object: "#60a5fa", // azul
   person: "#f87171", // rojo
@@ -19,34 +19,17 @@ const BOARD_SIZES = {
   larga: 55,
 };
 
-// Definir un tipo Team mínimo para tipar correctamente
-interface Team {
-  id: string;
-  name: string;
-  icon_url?: string;
-  members?: string[] | string;
-  position?: number;
-}
-
-// Definir un tipo GameState mínimo para tipar correctamente
-interface GameState {
-  current_turn_team?: string;
-  current_category?: string;
-  current_word?: string;
-  current_phase?: string;
-  dice_value?: number;
-  // Agrega aquí más campos si los usas
-}
-
-export default function HostPlayPage({ params }: { params: { room_id: string } }) {
-  const { room_id } = params;
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [gameState, setGameState] = useState<GameState | null>(null);
+export default function HostPlayPage({ params }) {
+  // Compatibilidad futura: unwrap params si es un Promise
+  const resolvedParams = typeof params?.then === 'function' ? React.use(params) : params;
+  const { room_id } = resolvedParams;
+  const [teams, setTeams] = useState([]);
+  const [gameState, setGameState] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [board, setBoard] = useState<string[]>([]);
-  const boardRef = useRef<string[]>([]); // <-- referencia siempre actualizada
-  const [categoryLabel, setCategoryLabel] = useState<string>("");
-  const [diceRolling, setDiceRolling] = useState<{ teamId: string | null; value: number | null }>({
+  const [board, setBoard] = useState([]);
+  const boardRef = useRef([]); // <-- referencia siempre actualizada
+  const [categoryLabel, setCategoryLabel] = useState("");
+  const [diceRolling, setDiceRolling] = useState({
     teamId: null,
     value: null,
   });
@@ -76,7 +59,7 @@ export default function HostPlayPage({ params }: { params: { room_id: string } }
       .single();
     if (roomData && roomData.categories && roomData.duration) {
       const categories = roomData.categories;
-      const size = BOARD_SIZES[roomData.duration as 'corta' | 'media' | 'larga'] || BOARD_SIZES.media;
+      const size = BOARD_SIZES[roomData.duration] || BOARD_SIZES.media;
       // Rellenar tablero alternando categorías
       console.log("[host_play] Cargando tablero con categorías:", categories, "y tamaño:", size);
       let catArr = Array.isArray(categories) ? categories : Object.keys(categories);
@@ -142,14 +125,14 @@ export default function HostPlayPage({ params }: { params: { room_id: string } }
         // Calcular categoría y palabra
         const category = boardRef.current[newPos];
         // Palabras por categoría (puedes mover esto a un util si lo prefieres)
-        const CATEGORY_WORDS: Record<string, string[]> = {
+        const CATEGORY_WORDS = {
           all: ['sol', 'casa', 'perro', 'gato', 'árbol', 'pelota', 'libro', 'avión', 'mar', 'luz'],
           object: ['mesa', 'silla', 'teléfono', 'cuchara', 'puerta', 'reloj', 'coche', 'vaso', 'llave', 'cama'],
           person: ['doctor', 'bombero', 'profesor', 'niño', 'abuelo', 'mujer', 'hombre', 'rey', 'reina', 'policía'],
           action: ['correr', 'saltar', 'bailar', 'leer', 'escribir', 'cantar', 'nadar', 'dibujar', 'cocinar', 'jugar'],
           movies: ['Titanic', 'Matrix', 'Avatar', 'Shrek', 'Frozen', 'Rocky', 'Gladiator', 'Coco', 'Up', 'Toy Story'],
         };
-        function getRandomElement<T>(arr: T[]): T {
+        function getRandomElement(arr) {
           return arr[Math.floor(Math.random() * arr.length)];
         }
         const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
@@ -211,7 +194,7 @@ export default function HostPlayPage({ params }: { params: { room_id: string } }
 */
 
   // Calcula la posición visual de una casilla en el tablero en forma de S
-  function getSBoardPosition(index: number, cols = 7, rowsPerZigzag = 2) {
+  function getSBoardPosition(index, cols = 7, rowsPerZigzag = 2) {
     // Cada "zigzag" es un bloque de (cols + rowsPerZigzag) casillas
     const blockSize = cols + rowsPerZigzag;
     const block = Math.floor(index / blockSize);
@@ -244,7 +227,7 @@ export default function HostPlayPage({ params }: { params: { room_id: string } }
       if (pos.y > maxY) maxY = pos.y;
     });
     // Agrupar equipos por casilla
-    const teamsByCell: Record<number, any[]> = {};
+    const teamsByCell = {};
     teams.forEach(team => {
       const pos = team.position || 0;
       if (!teamsByCell[pos]) teamsByCell[pos] = [];

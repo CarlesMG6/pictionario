@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import Image from "next/image";
-import { supabase } from '@/supabaseClient';
+import { supabase } from '../supabaseClient';
 
 function generateRoomId() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -19,7 +19,7 @@ export default function Home() {
   const [showModal, setShowModal] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef(null);
 
   const handleCreateRoom = async () => {
     const id = generateRoomId();

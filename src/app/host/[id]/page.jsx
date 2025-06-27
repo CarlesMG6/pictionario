@@ -1,10 +1,10 @@
 "use client";
 
 import React from 'react';
+import { supabase } from '../../../supabaseClient.js';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
-import { supabase } from '@/supabaseClient';
 
 const CATEGORIES = [
   { key: 'all', label: 'Todos Juegan' },
@@ -14,36 +14,12 @@ const CATEGORIES = [
   { key: 'movies', label: 'Películas o series' },
 ];
 
-// Definir un tipo Team mínimo para tipar correctamente
-interface Team {
-  id: string;
-  name: string;
-  icon_url?: string;
-  participants?: string[] | string;
-}
-
-// Definir un tipo GameState mínimo para tipar correctamente
-/*
-interface GameState {
-  current_turn_team?: string;
-  current_category?: string;
-  current_word?: string;
-  current_phase?: string;
-  dice_value?: number;
-  // Agrega aquí más campos si los usas
-}
-*/
-
-export default function Page({ params }: { params: { id: string } }) {
+function HostClient({ id }) {
   const router = useRouter();
-  const { id } = params;
-  const [teams, setTeams] = useState<Team[]>([]);
-//  const [gameState, setGameState] = useState<GameState | null>(null);
-
-  // Configuración de partida
-  const [duration, setDuration] = useState<'corta' | 'media' | 'larga'>('media');
-  const [roundTime, setRoundTime] = useState<string>('45'); // segundos
-  const [categories, setCategories] = useState<Record<string, boolean>>({
+  const [teams, setTeams] = useState([]);
+  const [duration, setDuration] = useState('media');
+  const [roundTime, setRoundTime] = useState('45');
+  const [categories, setCategories] = useState({
     all: true,
     object: true,
     person: true,
@@ -56,17 +32,14 @@ export default function Page({ params }: { params: { id: string } }) {
       router.replace('/');
       return;
     }
-    // Obtener room_id (uuid) por code
-    let roomUuid: string | null = null;
-    let channel: any = null;
+    let roomUuid = null;
+    let channel = null;
     async function fetchRoomAndTeams() {
       const { data: room } = await supabase.from('rooms').select('id').eq('code', id).single();
       if (!room) return;
       roomUuid = room.id;
-      // Cargar equipos iniciales
       const { data: teamList } = await supabase.from('teams').select('*').eq('room_id', roomUuid).order('position');
       setTeams(teamList || []);
-      // Suscribirse a realtime solo si no existe ya el canal
       if (!channel) {
         channel = supabase
           .channel(`room-${roomUuid}`)
@@ -83,32 +56,26 @@ export default function Page({ params }: { params: { id: string } }) {
     };
   }, [id, router]);
 
-  const handleCategoryToggle = (key: string) => {
+  const handleCategoryToggle = (key) => {
     setCategories((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleStartGame = async () => {
-    // 1. Obtener room_id
     const { data: room, error: roomError } = await supabase.from('rooms').select('id').eq('code', id).single();
     if (roomError || !room) return;
     const room_id = room.id;
-    // 2. Actualizar datos de la partida en rooms
-    const selectedCategories = Object.keys(categories).filter(key => categories[key]);
+    const selectedCategories = Object.keys(categories).filter((key) => categories[key]);
     await supabase.from('rooms').update({
       duration,
       round_time: parseInt(roundTime, 10),
       categories: selectedCategories
     }).eq('id', room_id);
-    // 3. Obtener primer equipo (ahora aleatorio)
     const { data: teamList } = await supabase.from('teams').select('id').eq('room_id', room_id).order('position');
     let firstTeamId = null;
     if (teamList && teamList.length > 0) {
       const randomIdx = Math.floor(Math.random() * teamList.length);
       firstTeamId = teamList[randomIdx].id;
     }
-    // 4. Crear registro en game_state
-    //log 
-    console.log('Iniciando partida para room_id:', room_id, 'con primer equipo:', firstTeamId);
     await supabase.from('game_state').insert([
       {
         room_id,
@@ -119,10 +86,8 @@ export default function Page({ params }: { params: { id: string } }) {
         is_active: true
       }
     ]);
-    // 5. Lanzar evento realtime 'match_starts'
     await supabase.channel(`room-${room_id}`)
       .send({ type: 'broadcast', event: 'match_starts', payload: {} });
-    // 6. Redirigir a la pantalla de juego del host
     router.push(`/host_play/${room_id}`);
   };
 
@@ -162,7 +127,7 @@ export default function Page({ params }: { params: { id: string } }) {
               <select
                 className="w-full border rounded px-3 py-2"
                 value={duration}
-                onChange={e => setDuration(e.target.value as any)}
+                onChange={e => setDuration(e.target.value)}
               >
                 <option value="corta">Corta</option>
                 <option value="media">Media</option>
@@ -177,18 +142,7 @@ export default function Page({ params }: { params: { id: string } }) {
                 max={120}
                 className="w-full border rounded px-3 py-2"
                 value={roundTime}
-                onChange={e => {
-                  const val = e.target.value;
-                  if (val === "") {
-                    setRoundTime("");
-                  } else {
-                    let num = parseInt(val, 10);
-                    if (isNaN(num)) num = 0;
-                    if (num < 0) num = 0;
-                    if (num > 120) num = 120;
-                    setRoundTime(num.toString());
-                  }
-                }}
+                onChange={e => setRoundTime(e.target.value)}
                 onBlur={() => {
                   if (roundTime === "" || isNaN(Number(roundTime))) {
                     setRoundTime("45");
@@ -200,7 +154,7 @@ export default function Page({ params }: { params: { id: string } }) {
             <div>
               <label className="block font-medium mb-2">Categorías habilitadas</label>
               <div className="flex flex-col gap-2">
-                {CATEGORIES.map(cat => (
+                {CATEGORIES.map((cat) => (
                   <label key={cat.key} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -217,4 +171,8 @@ export default function Page({ params }: { params: { id: string } }) {
       </div>
     </div>
   );
+}
+
+export default function Page({ params }) {
+  return <HostClient id={params.id} />;
 }

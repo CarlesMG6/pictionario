@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { supabase } from '@/supabaseClient';
+import { supabase } from '../../../supabaseClient';
 
 const ICONS = [
   '/player-icons/bird2.png',
@@ -23,36 +23,23 @@ const ICONS = [
   '/player-icons/unicorn2.png',
 ];
 
-function getRandomIcon(currentIcon?: string) {
+function getRandomIcon(currentIcon) {
   let filtered = ICONS;
   if (currentIcon) filtered = ICONS.filter(i => i !== currentIcon);
   return filtered[Math.floor(Math.random() * filtered.length)];
 }
 
-// Definir un tipo Team mínimo para tipar correctamente
-/*
-interface Team {
-  id: string;
-  name: string;
-  icon_url?: string;
-  members?: string[] | string;
-  position?: number;
-}
-*/
-
-export default function JoinPage({ params }: { params: { id: string } }) {
+export default function JoinPage({ params }) {
   const router = useRouter();
   const { id } = params;
 
   const [icon, setIcon] = useState(() => getRandomIcon());
   const [teamName, setTeamName] = useState('');
   const [memberInput, setMemberInput] = useState('');
-  const [members, setMembers] = useState<string[]>([]);
+  const [members, setMembers] = useState([]);
   const [error, setError] = useState('');
   const [confirmed, setConfirmed] = useState(false);
-  const [teamId, setTeamId] = useState<string | null>(null);
-  //const [teams, setTeams] = useState<Team[]>([]);
-  //const [gameState, setGameState] = useState<Record<string, unknown> | null>(null);
+  const [teamId, setTeamId] = useState(null);
 
   useEffect(() => {
     if (!id || id.length !== 6) {
@@ -68,7 +55,7 @@ export default function JoinPage({ params }: { params: { id: string } }) {
     }
   };
 
-  const handleMemberInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleMemberInputKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleAddMember();
@@ -79,7 +66,7 @@ export default function JoinPage({ params }: { params: { id: string } }) {
     handleAddMember();
   };
 
-  const handleRemoveMember = (name: string) => {
+  const handleRemoveMember = (name) => {
     setMembers(members.filter(m => m !== name));
   };
 
@@ -122,9 +109,8 @@ export default function JoinPage({ params }: { params: { id: string } }) {
   };
 
   React.useEffect(() => {
-    let roomUuid: string | null = null;
-    let channel: any = null;
-    //let mounted = true;
+    let roomUuid = null;
+    let channel = null;
     async function subscribeMatchStarts() {
       const { data: room } = await supabase.from('rooms').select('id').eq('code', id).single();
       if (!room) return;
