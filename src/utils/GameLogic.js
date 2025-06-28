@@ -1,5 +1,6 @@
 import { db } from '../firebaseClient.js';
 import { collection, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy } from 'firebase/firestore';
+import { CATEGORY_WORDS } from './CategoryWords';
 
 export class GameLogic {
   static async success(room_id) {
@@ -36,14 +37,6 @@ export class GameLogic {
     console.log(`Posición del equipo ${nextTeam.id}: ${pos}`);
     console.log(`Categoría del equipo ${nextTeam.id}: ${boardArr[pos]}`);
     const category = boardArr[pos];
-    const CATEGORY_WORDS = {
-      all: ['sol', 'casa', 'perro', 'gato', 'árbol', 'pelota', 'libro', 'avión', 'mar', 'luz'],
-      object: ['mesa', 'silla', 'teléfono', 'cuchara', 'puerta', 'reloj', 'coche', 'vaso', 'llave', 'cama'],
-      person: ['doctor', 'bombero', 'profesor', 'niño', 'abuelo', 'mujer', 'hombre', 'rey', 'reina', 'policía'],
-      action: ['correr', 'saltar', 'bailar', 'leer', 'escribir', 'cantar', 'nadar', 'dibujar', 'cocinar', 'jugar'],
-      movies: ['Titanic', 'Matrix', 'Avatar', 'Shrek', 'Frozen', 'Rocky', 'Gladiator', 'Coco', 'Up', 'Toy Story'],
-    };
-    function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
     const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
     // Calcular all_play (1/3 de probabilidad si la categoría no es 'all')
     let allPlay = false;

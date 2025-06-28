@@ -4,6 +4,16 @@ import React, { useEffect, useState, useRef } from "react";
 import { db } from '../../../firebaseClient.js';
 import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion } from 'firebase/firestore';
 import Image from "next/image";
+import { CATEGORY_WORDS } from '../../../utils/CategoryWords';
+
+const CATEGORIES = [
+  { key: 'all', label: 'Todos juegan' },
+  { key: 'person', label: 'Persona, animal o lugar' },
+  { key: 'object', label: 'Objeto' },
+  { key: 'action', label: 'Acción' },
+  { key: 'difficulty', label: 'Dificultad' },
+  { key: 'movies', label: 'Películas o series' },
+];
 
 // Colores por categoría
 const CATEGORY_COLORS = {
@@ -12,6 +22,7 @@ const CATEGORY_COLORS = {
   person: "#f87171", // rojo
   action: "#34d399", // verde
   movies: "#a78bfa", // violeta
+  difficulty: "#f472b6", // rosa
 };
 
 const BOARD_SIZES = {
@@ -170,13 +181,6 @@ export default function HostPlayPage({ params }) {
           // 3. Calcular categoría y palabra
           const category = boardRef.current[newPos];
           // Palabra aleatoria (puedes usar GameLogic si lo prefieres)
-          const CATEGORY_WORDS = {
-            all: ['sol', 'casa', 'perro', 'gato', 'árbol', 'pelota', 'libro', 'avión', 'mar', 'luz'],
-            object: ['mesa', 'silla', 'teléfono', 'cuchara', 'puerta', 'reloj', 'coche', 'vaso', 'llave', 'cama'],
-            person: ['doctor', 'bombero', 'profesor', 'niño', 'abuelo', 'mujer', 'hombre', 'rey', 'reina', 'policía'],
-            action: ['correr', 'saltar', 'bailar', 'leer', 'escribir', 'cantar', 'nadar', 'dibujar', 'cocinar', 'jugar'],
-            movies: ['Titanic', 'Matrix', 'Avatar', 'Shrek', 'Frozen', 'Rocky', 'Gladiator', 'Coco', 'Up', 'Toy Story'],
-          };
           function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
           const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
           // 4. Calcular all_play (1/3 de probabilidad si la categoría no es 'all')
@@ -479,18 +483,19 @@ export default function HostPlayPage({ params }) {
               <div className="text-lg text-green-600 font-bold mb-1">¡Todos juegan!</div>
             )}
             <div className="text-lg text-gray-500 mb-2">Categoría actual</div>
-            <div
-              className="text-2xl font-bold"
-              style={{ color: CATEGORY_COLORS[gameState?.current_category] }}
-            >
-              {gameState?.current_category || "-"}
-            </div>
-            {gameState?.current_word && gameState?.current_phase == 'dice' &&(
-              <div className="mt-4 text-lg text-gray-700">
-                <span className="font-semibold">Palabra:</span> {gameState.current_word}
-              </div>
-            )}
+            <div className="text-2xl font-bold mb-2" style={{ color: CATEGORY_COLORS[gameState?.current_category] }}>{gameState?.current_category || '-'}</div>
           </div>
+          {/* Listado vertical de categorías habilitadas debajo del recuadro de categoría actual */}
+          {roomConfig?.categories && Array.isArray(roomConfig.categories) && (
+            <div className="flex flex-col gap-2 mt-4">
+              <div className="text-base font-bold text-gray-700 mb-1">Categorías</div>
+              {CATEGORIES.filter(cat => roomConfig.categories.includes(cat.key)).map(cat => (
+                <div key={cat.key} className="flex items-center px-3 py-2 rounded-lg shadow text-base font-semibold" style={{ background: CATEGORY_COLORS[cat.key] || '#eee', color: '#222' }}>
+                  {cat.label}
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex flex-col">
             <h2 className="text-2xl font-semibold mb-4">Equipos</h2>
             <div className="flex flex-col gap-4">

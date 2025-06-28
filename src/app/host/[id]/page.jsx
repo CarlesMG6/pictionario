@@ -6,12 +6,14 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion } from 'firebase/firestore';
+import { CATEGORY_WORDS } from '../../../utils/CategoryWords';
 
 const CATEGORIES = [
-  { key: 'all', label: 'Todos Juegan' },
+  { key: 'all', label: 'Todos juegan' },
+  { key: 'person', label: 'Persona, animal o lugar' },
   { key: 'object', label: 'Objeto' },
-  { key: 'person', label: 'Persona animal o lugar' },
   { key: 'action', label: 'Acción' },
+  { key: 'difficulty', label: 'Dificultad' },
   { key: 'movies', label: 'Películas o series' },
 ];
 
@@ -22,9 +24,10 @@ function HostClient({ id }) {
   const [roundTime, setRoundTime] = useState('45');
   const [categories, setCategories] = useState({
     all: true,
-    object: true,
     person: true,
+    object: true,
     action: true,
+    difficulty: false,
     movies: false,
   });
 
@@ -64,7 +67,9 @@ function HostClient({ id }) {
     if (roomsSnap.empty) return;
     const roomDoc = roomsSnap.docs[0];
     const room_id = roomDoc.id;
-    const selectedCategories = Object.keys(categories).filter((key) => categories[key]);
+    // Cuando se use selectedCategories, filtrar solo por claves válidas:
+    const validCategoryKeys = Object.keys(CATEGORY_WORDS);
+    const selectedCategories = Object.keys(categories).filter((key) => categories[key] && validCategoryKeys.includes(key));
     await updateDoc(doc(db, 'rooms', room_id), {
       duration,
       round_time: parseInt(roundTime, 10),
@@ -85,13 +90,6 @@ function HostClient({ id }) {
     if (selectedCategories.length > 0) {
       initialCategory = selectedCategories[Math.floor(Math.random() * selectedCategories.length)];
     }
-    const CATEGORY_WORDS = {
-      all: ['sol', 'casa', 'perro', 'gato', 'árbol', 'pelota', 'libro', 'avión', 'mar', 'luz'],
-      object: ['mesa', 'silla', 'teléfono', 'cuchara', 'puerta', 'reloj', 'coche', 'vaso', 'llave', 'cama'],
-      person: ['doctor', 'bombero', 'profesor', 'niño', 'abuelo', 'mujer', 'hombre', 'rey', 'reina', 'policía'],
-      action: ['correr', 'saltar', 'bailar', 'leer', 'escribir', 'cantar', 'nadar', 'dibujar', 'cocinar', 'jugar'],
-      movies: ['Titanic', 'Matrix', 'Avatar', 'Shrek', 'Frozen', 'Rocky', 'Gladiator', 'Coco', 'Up', 'Toy Story'],
-    };
     function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
     const initialWord = getRandomElement(CATEGORY_WORDS[initialCategory] || CATEGORY_WORDS['all']);
     // Crear estado de juego
