@@ -4,7 +4,8 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { supabase } from '../../../supabaseClient';
+import { db } from '../../../firebaseClient.js';
+import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion } from 'firebase/firestore';
 
 const ICONS = [
   '/player-icons/bird2.png',
@@ -40,12 +41,37 @@ export default function JoinPage({ params }) {
   const [error, setError] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [teamId, setTeamId] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [roomUuid, setRoomUuid] = useState(null);
 
   useEffect(() => {
     if (!id || id.length !== 6) {
       router.replace('/');
+      return;
     }
-  }, [id, router]);
+    let unsubRoom = null;
+    async function fetchRoomAndSubscribe() {
+      // Buscar la sala por código (campo 'code')
+      const roomsQuery = query(collection(db, 'rooms'), where('code', '==', id));
+      const roomsSnap = await getDocs(roomsQuery);
+      if (roomsSnap.empty) return;
+      const roomDoc = roomsSnap.docs[0];
+      const roomUuid = roomDoc.id;
+      setRoomUuid(roomUuid);
+      // Suscribirse al documento de la sala
+      unsubRoom = onSnapshot(doc(db, 'rooms', roomUuid), (roomSnap) => {
+        const data = roomSnap.data();
+        // Si playing es true y el equipo ya está confirmado, redirigir
+        if (data?.playing && confirmed && teamId) {
+          router.replace(`/play/${roomUuid}/${teamId}`);
+        }
+      });
+    }
+    fetchRoomAndSubscribe();
+    return () => {
+      if (unsubRoom) unsubRoom();
+    };
+  }, [id, router, confirmed, teamId]);
 
   const handleAddMember = () => {
     const name = memberInput.trim();
@@ -81,56 +107,37 @@ export default function JoinPage({ params }) {
     }
     setError('');
     // Buscar la sala por código para obtener el room_id (uuid)
-    const { data: room, error: roomError } = await supabase.from('rooms').select('id').eq('code', id).single();
-    if (roomError || !room) {
+    const roomsQuery = query(collection(db, 'rooms'), where('code', '==', id));
+    const roomsSnap = await getDocs(roomsQuery);
+    if (roomsSnap.empty) {
       setError('No se ha encontrado la sala.');
       return;
     }
-    // Insertar el equipo en la tabla teams
-    const { data: inserted, error: teamError } = await supabase.from('teams').insert([
-      {
-        room_id: room.id,
-        name: teamName,
-        icon_url: icon,
-        position: 0,
-      }
-    ]).select();
-    if (teamError || !inserted || !inserted[0]) {
+    const roomDoc = roomsSnap.docs[0];
+    const roomId = roomDoc.id;
+    // Crear el equipo como objeto
+    const newTeam = {
+      name: teamName,
+      icon_url: icon,
+      position: 0,
+      members: members,
+      createdAt: new Date().toISOString(),
+      id: crypto.randomUUID(),
+    };
+    try {
+      // Añadir el equipo al array 'teams' del documento de la sala
+      await updateDoc(doc(db, 'rooms', roomId), {
+        teams: arrayUnion(newTeam)
+      });
+      // Guardar el id del equipo en localStorage y en estado para esta ventana
+      localStorage.setItem(`team_id_${roomId}`, newTeam.id);
+      setTeamId(newTeam.id);
+      setConfirmed(true);
+    } catch (e) {
       setError('Error al registrar el equipo.');
       return;
     }
-    // Guardar el id del equipo en localStorage y en estado para esta ventana
-    localStorage.setItem(`team_id_${room.id}`, inserted[0].id);
-    setTeamId(inserted[0].id);
-    // Lanzar evento realtime team_join
-    await supabase.channel(`room-${room.id}`)
-      .send({ type: 'broadcast', event: 'team_join', payload: { team: teamName } });
-    setConfirmed(true);
   };
-
-  React.useEffect(() => {
-    let roomUuid = null;
-    let channel = null;
-    async function subscribeMatchStarts() {
-      const { data: room } = await supabase.from('rooms').select('id').eq('code', id).single();
-      if (!room) return;
-      roomUuid = room.id;
-      channel = supabase
-        .channel(`room-${roomUuid}`)
-        .on('broadcast', { event: 'match_starts' }, async () => {
-          // Prioriza el teamId de esta ventana, si existe
-          const myTeamId = teamId || localStorage.getItem(`team_id_${roomUuid}`);
-          if (myTeamId) {
-            router.push(`/play/${roomUuid}/${myTeamId}`);
-          }
-        })
-        .subscribe();
-    }
-    subscribeMatchStarts();
-    return () => {
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, [id, router, teamId]);
 
   if (confirmed) {
     return (

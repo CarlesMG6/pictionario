@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import Image from "next/image";
-import { supabase } from '../supabaseClient';
+import { db } from '../firebaseClient.js';
+import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, serverTimestamp } from 'firebase/firestore';
 
 function generateRoomId() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -22,10 +23,15 @@ export default function Home() {
   const inputRef = useRef(null);
 
   const handleCreateRoom = async () => {
-    const id = generateRoomId();
-    const code = id;
-    await supabase.from('rooms').insert([{ code }]);
-    router.push(`/host/${id}`);
+    const code = generateRoomId();
+    // Crear sala con id autogenerado y campos code, createdAt, playing: false
+    const docRef = await addDoc(collection(db, 'rooms'), {
+      code,
+      createdAt: serverTimestamp(),
+      playing: false,
+      teams: []
+    });
+    router.push(`/host/${code}`);
   };
 
   const handleJoinRoom = async () => {
@@ -33,9 +39,10 @@ export default function Home() {
       setError('Introduce un código válido de 6 caracteres.');
       return;
     }
-    // Comprobar si existe la sala en Supabase
-    const { data, error: dbError } = await supabase.from('rooms').select('code').eq('code', joinCode).single();
-    if (dbError || !data) {
+    // Buscar la sala por el campo code en Firestore
+    const q = query(collection(db, 'rooms'), where('code', '==', joinCode));
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
       setError('No existe ninguna sala con ese código.');
       setTimeout(() => {
         setShowModal(false);

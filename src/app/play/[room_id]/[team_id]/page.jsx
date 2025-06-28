@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../../../supabaseClient.js';
+import { db } from '../../../../firebaseClient.js';
 import { GameLogic } from '../../../../utils/GameLogic';
 import Image from 'next/image';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function PlayPage({ params }) {
   // Compatibilidad futura: unwrap params si es un Promise
@@ -11,61 +12,43 @@ export default function PlayPage({ params }) {
   const { room_id, team_id } = resolvedParams;
   const [teams, setTeams] = useState([]);
   const [gameState, setGameState] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showWord, setShowWord] = useState(false);
   const [showStartRound, setShowStartRound] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Función para cargar el estado de la partida y equipos
-  const fetchGameState = async () => {
-    if (!room_id) return;
-    setLoading(true);
-    const { data: state } = await supabase.from('game_state').select('*').eq('room_id', room_id).single();
-    setGameState(state);
-    const { data: teamList } = await supabase.from('teams').select('*').eq('room_id', room_id);
-    setTeams(teamList || []);
-    setLoading(false);
-  };
-
   const handleSuccess = async () => {
     if (!room_id) return;
     setIsProcessing(true);
-    await supabase.channel(`room-${room_id}`)
-      .send({ type: 'broadcast', event: 'stop_timer', payload: { result: 'success', team_id } });
     await GameLogic.success(room_id);
-    // Recuperar el nuevo estado y actualizar gameState
-    const { data: state } = await supabase.from('game_state').select('*').eq('room_id', room_id).single();
-    setGameState(state);
+    setShowStartRound(false);
+    setShowWord(false);
     setIsProcessing(false);
   };
   const handleFail = async () => {
     if (!room_id) return;
     setIsProcessing(true);
-    await supabase.channel(`room-${room_id}`)
-      .send({ type: 'broadcast', event: 'stop_timer', payload: { result: 'fail', team_id } });
+    console.log('Fallo en la ronda');
     await GameLogic.fail(room_id);
-    // Recuperar el nuevo estado y actualizar gameState
-    const { data: state } = await supabase.from('game_state').select('*').eq('room_id', room_id).single();
-    setGameState(state);
+    setShowStartRound(false);
+    setShowWord(false);
     setIsProcessing(false);
   };
 
   useEffect(() => {
-    fetchGameState();
-    const channel = supabase
-      .channel(`room-${room_id}`)
-      .on('broadcast', { event: 'update_match' }, async () => {
-        console.log('Recibiendo evento update_match');
-        setShowWord(false);
-        setShowStartRound(false);
-        setIsProcessing(false);
-        await fetchGameState();
-      })
-      .subscribe();
+    if (!room_id) return;
+    // Suscripción a game_state
+    const unsubState = onSnapshot(doc(db, 'game_state', room_id), (docSnap) => {
+      setGameState(docSnap.exists() ? docSnap.data() : null);
+    });
+    // Suscripción a equipos embebidos en la sala
+    const unsubRoom = onSnapshot(doc(db, 'rooms', room_id), (docSnap) => {
+      const data = docSnap.data();
+      setTeams(Array.isArray(data?.teams) ? data.teams : []);
+    });
     return () => {
-      supabase.removeChannel(channel);
+      unsubState();
+      unsubRoom();
     };
-    // eslint-disable-next-line
   }, [room_id]);
 
   // Esperar a que los params estén listos
@@ -73,7 +56,7 @@ export default function PlayPage({ params }) {
     return <div className="flex items-center justify-center min-h-screen">Cargando...</div>;
   }
 
-  if (loading || !gameState) {
+  if (!gameState) {
     return <div className="flex items-center justify-center min-h-screen">Cargando...</div>;
   }
 
@@ -127,8 +110,7 @@ export default function PlayPage({ params }) {
             className="mt-6 px-6 py-3 bg-green-600 text-white rounded-lg text-lg font-bold hover:bg-green-700"
             onClick={async () => {
               setIsProcessing(true);
-              await supabase.channel(`room-${room_id}`)
-                .send({ type: 'broadcast', event: 'start_timer', payload: { team_id } });
+              await GameLogic.startRound(room_id, team_id);
               setIsProcessing(false);
             }}
             disabled={isProcessing}
@@ -167,9 +149,11 @@ export default function PlayPage({ params }) {
             className="bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-4 rounded-full text-2xl font-bold shadow-lg"
             onClick={async () => {
               setIsProcessing(true);
+              // Cambiar la fase a 'dice_rolling' en game_state
               console.log('Tirando el dado...');
-              await supabase.channel(`room-${room_id}`)
-                .send({ type: 'broadcast', event: 'roll_dice', payload: { team_id } });
+              await import('firebase/firestore').then(({ updateDoc, doc }) =>
+                updateDoc(doc(db, 'game_state', room_id), { current_phase: 'dice_rolling' })
+              );
               setIsProcessing(false);
             }}
             disabled={isProcessing}

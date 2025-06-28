@@ -1,10 +1,11 @@
 "use client";
 
 import React from 'react';
-import { supabase } from '../../../supabaseClient.js';
+import { db } from '../../../firebaseClient.js';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion } from 'firebase/firestore';
 
 const CATEGORIES = [
   { key: 'all', label: 'Todos Juegan' },
@@ -32,27 +33,23 @@ function HostClient({ id }) {
       router.replace('/');
       return;
     }
-    let roomUuid = null;
-    let channel = null;
+    let unsubRoom = null;
     async function fetchRoomAndTeams() {
-      const { data: room } = await supabase.from('rooms').select('id').eq('code', id).single();
-      if (!room) return;
-      roomUuid = room.id;
-      const { data: teamList } = await supabase.from('teams').select('*').eq('room_id', roomUuid).order('position');
-      setTeams(teamList || []);
-      if (!channel) {
-        channel = supabase
-          .channel(`room-${roomUuid}`)
-          .on('broadcast', { event: 'team_join' }, async () => {
-            const { data: updatedTeams } = await supabase.from('teams').select('*').eq('room_id', roomUuid).order('position');
-            setTeams(updatedTeams || []);
-          })
-          .subscribe();
-      }
+      // Buscar la sala por código (campo 'code')
+      const roomsQuery = query(collection(db, 'rooms'), where('code', '==', id));
+      const roomsSnap = await getDocs(roomsQuery);
+      if (roomsSnap.empty) return;
+      const roomDoc = roomsSnap.docs[0];
+      const roomUuid = roomDoc.id;
+      // Suscribirse al documento de la sala
+      unsubRoom = onSnapshot(doc(db, 'rooms', roomUuid), (roomSnap) => {
+        const data = roomSnap.data();
+        setTeams(Array.isArray(data?.teams) ? data.teams : []);
+      });
     }
     fetchRoomAndTeams();
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      if (unsubRoom) unsubRoom();
     };
   }, [id, router]);
 
@@ -61,33 +58,52 @@ function HostClient({ id }) {
   };
 
   const handleStartGame = async () => {
-    const { data: room, error: roomError } = await supabase.from('rooms').select('id').eq('code', id).single();
-    if (roomError || !room) return;
-    const room_id = room.id;
+    // Buscar la sala por código (campo 'code')
+    const roomsQuery = query(collection(db, 'rooms'), where('code', '==', id));
+    const roomsSnap = await getDocs(roomsQuery);
+    if (roomsSnap.empty) return;
+    const roomDoc = roomsSnap.docs[0];
+    const room_id = roomDoc.id;
     const selectedCategories = Object.keys(categories).filter((key) => categories[key]);
-    await supabase.from('rooms').update({
+    await updateDoc(doc(db, 'rooms', room_id), {
       duration,
       round_time: parseInt(roundTime, 10),
-      categories: selectedCategories
-    }).eq('id', room_id);
-    const { data: teamList } = await supabase.from('teams').select('id').eq('room_id', room_id).order('position');
+      categories: selectedCategories,
+      playing: true
+    });
+    // Obtener equipos desde el array de la sala
+    const roomSnap = await getDoc(doc(db, 'rooms', room_id));
+    const roomData = roomSnap.data();
+    const teamList = Array.isArray(roomData?.teams) ? roomData.teams : [];
     let firstTeamId = null;
     if (teamList && teamList.length > 0) {
       const randomIdx = Math.floor(Math.random() * teamList.length);
       firstTeamId = teamList[randomIdx].id;
     }
-    await supabase.from('game_state').insert([
-      {
-        room_id,
-        current_turn_team: firstTeamId,
-        current_phase: 'play',
-        current_word: null,
-        dice_value: null,
-        is_active: true
-      }
-    ]);
-    await supabase.channel(`room-${room_id}`)
-      .send({ type: 'broadcast', event: 'match_starts', payload: {} });
+    // Generar categoría y palabra inicial
+    let initialCategory = "all";
+    if (selectedCategories.length > 0) {
+      initialCategory = selectedCategories[Math.floor(Math.random() * selectedCategories.length)];
+    }
+    const CATEGORY_WORDS = {
+      all: ['sol', 'casa', 'perro', 'gato', 'árbol', 'pelota', 'libro', 'avión', 'mar', 'luz'],
+      object: ['mesa', 'silla', 'teléfono', 'cuchara', 'puerta', 'reloj', 'coche', 'vaso', 'llave', 'cama'],
+      person: ['doctor', 'bombero', 'profesor', 'niño', 'abuelo', 'mujer', 'hombre', 'rey', 'reina', 'policía'],
+      action: ['correr', 'saltar', 'bailar', 'leer', 'escribir', 'cantar', 'nadar', 'dibujar', 'cocinar', 'jugar'],
+      movies: ['Titanic', 'Matrix', 'Avatar', 'Shrek', 'Frozen', 'Rocky', 'Gladiator', 'Coco', 'Up', 'Toy Story'],
+    };
+    function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    const initialWord = getRandomElement(CATEGORY_WORDS[initialCategory] || CATEGORY_WORDS['all']);
+    // Crear estado de juego
+    await setDoc(doc(db, 'game_state', room_id), {
+      room_id,
+      current_turn_team: firstTeamId,
+      current_phase: 'play',
+      current_word: initialWord,
+      current_category: initialCategory,
+      dice_value: null,
+      is_active: true
+    });
     router.push(`/host_play/${room_id}`);
   };
 
@@ -107,8 +123,8 @@ function HostClient({ id }) {
                 <Image src={team.icon_url || '/vercel.svg'} alt="icono equipo" width={32} height={32} className="mt-1" />
                 <div>
                   <div className="font-bold text-lg">{team.name}</div>
-                  {team.participants ? (
-                    <div className="text-sm text-gray-600 dark:text-gray-300">{Array.isArray(team.participants) ? team.participants.join(', ') : team.participants}</div>
+                  {team.members ? (
+                    <div className="text-sm text-gray-600 dark:text-gray-300">{Array.isArray(team.members) ? team.members.join(', ') : team.members}</div>
                   ) : null}
                 </div>
               </div>
