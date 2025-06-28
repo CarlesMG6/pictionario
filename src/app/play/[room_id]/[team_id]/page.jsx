@@ -76,8 +76,30 @@ export default function PlayPage({ params }) {
       </div>
     );
   }
-
-  if (gameState.current_phase === 'play') {
+/*
+  if ((gameState.current_phase === 'timer_starts' || gameState.current_phase === 'timer_running') && isMyTurn) {
+    // Solo el equipo al que le toca ve el botón de parar temporizador
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8">
+        <h1 className="text-3xl font-bold mb-6">¡Ronda en marcha!</h1>
+        <button
+          className="mt-6 px-6 py-3 bg-red-600 text-white rounded-lg text-lg font-bold hover:bg-red-700"
+          onClick={async () => {
+            setIsProcessing(true);
+            await import('firebase/firestore').then(({ updateDoc, doc }) =>
+              updateDoc(doc(db, 'game_state', room_id), { current_phase: 'timer_stopped' })
+            );
+            setIsProcessing(false);
+          }}
+          disabled={isProcessing}
+        >
+          Parar temporizador
+        </button>
+      </div>
+    );
+  }
+*/
+  /*if (gameState.current_phase === 'play' || gameState.current_phase === 'timer_stopped') {
     const canControl = isMyTurn || isAllPlay;
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-8">
@@ -97,7 +119,6 @@ export default function PlayPage({ params }) {
             aria-label="Mostrar/Ocultar palabra"
             disabled={isProcessing}
           >
-            {/* Icono de ojo */}
             {showWord ? (
               <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path stroke="#2563eb" strokeWidth="2" d="M3 12s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="3" stroke="#2563eb" strokeWidth="2"/></svg>
             ) : (
@@ -139,6 +160,7 @@ export default function PlayPage({ params }) {
       </div>
     );
   }
+  */
 
   if (gameState.current_phase === 'dice') {
     return (
@@ -150,7 +172,6 @@ export default function PlayPage({ params }) {
             onClick={async () => {
               setIsProcessing(true);
               // Cambiar la fase a 'dice_rolling' en game_state
-              console.log('Tirando el dado...');
               await import('firebase/firestore').then(({ updateDoc, doc }) =>
                 updateDoc(doc(db, 'game_state', room_id), { current_phase: 'dice_rolling' })
               );
@@ -167,56 +188,115 @@ export default function PlayPage({ params }) {
     );
   }
 
-  const renderTeams = () => {
+  // Si NO es mi turno y estamos en play/timer_starts/timer_running/timer_stopped: solo palabra y ojo
+  if (!isMyTurn && ["play", "timer_starts", "timer_running", "timer_stopped"].includes(gameState.current_phase)) {
     return (
-      <div className="flex flex-col gap-4 w-full max-w-4xl mx-auto">
-        {teams.map(team => {
-          const isTurn = gameState.current_turn_team === team.id;
-          const isWinner = gameState.winning_team === team.id;
-          return (
-            <div
-              key={team.id}
-              className={`border-l-4 pl-4 py-2 ${isTurn ? 'border-blue-500' : 'border-transparent'} ${isWinner ? 'bg-green-50' : ''}`}
-            >
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold">{team.name}</span>
-                {isWinner && <span className="text-sm text-green-700 font-medium">¡Ganador!</span>}
-              </div>
-              <div className="flex gap-2 mt-1">
-                <div className="text-sm text-gray-500">
-                  {isTurn ? 'Tu turno' : 'Turno de otro equipo'}
-                </div>
-                {gameState.current_phase === 'dice' && (
-                  <div className="text-sm font-medium">
-                    {team.id === gameState.dice_result?.team_id ? `Resultado: ${gameState.dice_result.value}` : 'Esperando dado...'}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex flex-col items-center justify-center min-h-screen p-8">
+        <WordWithEye showWord={showWord} setShowWord={setShowWord} isProcessing={isProcessing} gameState={gameState} isMyTurn={isMyTurn} currentTeam={currentTeam} />
       </div>
     );
-  };
+  }
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <h1 className="text-3xl font-bold mb-6">Sala: {room_id}</h1>
-      {isMyTurn ? (
-        <div className="text-2xl text-green-700 font-semibold">¡Es tu turno!</div>
-      ) : (
-        <div className="text-2xl text-blue-700 font-semibold">
-          Es turno de: {currentTeam ? (
-            <span className="inline-flex items-center gap-2">
-              {currentTeam.icon_url && (
-                <Image src={currentTeam.icon_url} alt="icono" className="inline w-8 h-8 rounded-full border" width={32} height={32} />
-              )}
-              <span>{currentTeam.name}</span>
-            </span>
-          ) : 'otro equipo'}
+  // Es mi turno y fase = play: palabra+ojo+empezar ronda
+  if (isMyTurn && gameState.current_phase === 'play') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8">
+        <WordWithEye showWord={showWord} setShowWord={setShowWord} isProcessing={isProcessing} gameState={gameState} isMyTurn={isMyTurn} currentTeam={currentTeam} />
+        <button
+          className="mt-6 px-6 py-3 bg-green-600 text-white rounded-lg text-lg font-bold hover:bg-green-700"
+          onClick={async () => {
+            setIsProcessing(true);
+            await GameLogic.startRound(room_id, team_id);
+            setIsProcessing(false);
+          }}
+          disabled={isProcessing}
+        >
+          Empezar ronda
+        </button>
+      </div>
+    );
+  }
+
+  // Es mi turno y fase = timer_starts o timer_running: palabra+ojo+parar temporizador
+  if (isMyTurn && ["timer_starts", "timer_running"].includes(gameState.current_phase)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8">
+        <WordWithEye showWord={showWord} setShowWord={setShowWord} isProcessing={isProcessing} gameState={gameState} isMyTurn={isMyTurn} currentTeam={currentTeam} />
+        <button
+          className="mt-6 px-6 py-3 bg-red-600 text-white rounded-lg text-lg font-bold hover:bg-red-700"
+          onClick={async () => {
+            setIsProcessing(true);
+            await import('firebase/firestore').then(({ updateDoc, doc }) =>
+              updateDoc(doc(db, 'game_state', room_id), { current_phase: 'timer_stopped' })
+            );
+            setIsProcessing(false);
+          }}
+          disabled={isProcessing}
+        >
+          Parar temporizador
+        </button>
+      </div>
+    );
+  }
+
+  // Es mi turno y fase = timer_stopped: palabra+ojo+acierto/fallo
+  if (isMyTurn && gameState.current_phase === 'timer_stopped') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8">
+        <WordWithEye showWord={showWord} setShowWord={setShowWord} isProcessing={isProcessing} gameState={gameState} isMyTurn={isMyTurn} currentTeam={currentTeam} />
+        <div className="flex gap-6 mt-8">
+          <button
+            className="bg-red-600 text-white px-6 py-3 rounded-lg text-lg font-bold hover:bg-red-700"
+            onClick={handleFail}
+            disabled={isProcessing}
+          >
+            ❌ Fallo
+          </button>
+          <button
+            className="bg-green-600 text-white px-6 py-3 rounded-lg text-lg font-bold hover:bg-green-700"
+            onClick={handleSuccess}
+            disabled={isProcessing}
+          >
+            ✅ Acierto
+          </button>
         </div>
-      )}
-      {renderTeams()}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// Componente para mostrar la palabra y el botón de ojo
+function WordWithEye({ showWord, setShowWord, isProcessing, gameState, isMyTurn, currentTeam }) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="mb-1 text-base text-gray-600 font-medium w-full">
+        {isMyTurn
+          ? <>¡Es tu turno! {gameState.all_play ? <span className="ml-2 text-green-600 font-bold">¡pero juegan todos los equipos!</span> : null}</>
+          : currentTeam
+            ? <>Es turno de <span className="font-bold text-blue-700">{currentTeam.name}</span>{gameState.all_play ? <span className="ml-2 text-green-600 font-bold">¡pero juegan todos los equipos!</span> : null}</>
+            : 'Es turno de otro equipo'}
+      </div>
+      <div className="flex flex-row gap-8 items-center">
+        <div className="border rounded-lg p-8 bg-white shadow text-2xl min-w-[220px] min-h-[80px] flex items-center justify-center">
+          {showWord
+            ? (gameState.current_word ? <span className="text-gray-800">{gameState.current_word}</span> : <span className="italic text-gray-800">(Sin palabra)</span>)
+            : <span className="italic text-gray-500">Palabra oculta</span>}
+        </div>
+        <button
+          className="ml-4 p-2 bg-blue-100 rounded-full border hover:bg-blue-200"
+          onClick={() => setShowWord((v) => !v)}
+          aria-label={showWord ? 'Ocultar palabra' : 'Mostrar palabra'}
+          disabled={isProcessing}
+        >
+          {showWord ? (
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path stroke="#2563eb" strokeWidth="2" d="M3 12s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="3" stroke="#2563eb" strokeWidth="2"/></svg>
+          ) : (
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path stroke="#2563eb" strokeWidth="2" d="M3 12s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="3" stroke="#2563eb" strokeWidth="2" fill="#2563eb"/></svg>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

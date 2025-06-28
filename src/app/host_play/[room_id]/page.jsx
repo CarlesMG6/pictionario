@@ -32,6 +32,67 @@ export default function HostPlayPage({ params }) {
     teamId: null,
     value: null,
   });
+  const [roomConfig, setRoomConfig] = useState(null);
+
+  // Temporizador para la ronda
+  const [timer, setTimer] = useState(null);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const timerRef = useRef();
+
+  // Sonidos para avisos
+  const beepAudio = typeof window !== 'undefined' ? new Audio('/Audio/timer-ticks.mp3') : null;
+  const endAudio = typeof window !== 'undefined' ? new Audio('/Audio/timer-alarm.mp3') : null;
+  const beepTimes = [5];
+  const [lastBeep, setLastBeep] = useState(null);
+
+  // Efecto: avisos sonoros en el temporizador
+  useEffect(() => {
+    if (gameState?.current_phase === 'timer_running' && timer !== null && beepTimes.includes(timer) && timer !== lastBeep) {
+      setLastBeep(timer);
+      if (beepAudio) beepAudio.play();
+    }
+    if (gameState?.current_phase === 'timer_running' && timer === 0 && endAudio) {
+      endAudio.play();
+    }
+  }, [timer, gameState?.current_phase]);
+
+  // Efecto: cuando la fase es 'timer_starts', setea 'timer_running' y el tiempo inicial
+  useEffect(() => {
+    if (gameState?.current_phase === 'timer_starts' && !timerRunning) {
+      const duration = typeof roomConfig?.round_time === 'number' ? roomConfig.round_time : 45;
+      setTimer(duration);
+      setTimerRunning(true);
+      setLastBeep(null);
+      updateDoc(doc(db, 'game_state', room_id), { current_phase: 'timer_running' });
+    }
+  }, [gameState?.current_phase, roomConfig?.round_time]);
+
+  // Efecto: cuando la fase es 'timer_running', cuenta atrás local
+  useEffect(() => {
+    if (gameState?.current_phase === 'timer_running' && timerRunning && timer !== null && timer > 0) {
+      timerRef.current = setInterval(() => {
+        setTimer(prev => {
+          if (prev === 1) {
+            clearInterval(timerRef.current);
+            setTimerRunning(false);
+            updateDoc(doc(db, 'game_state', room_id), { current_phase: 'timer_stopped' });
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [gameState?.current_phase, timerRunning, timer]);
+
+  // Si la fase deja de ser 'timer_starts', 'timer_running' detener temporizador
+  useEffect(() => {
+    if (gameState?.current_phase !== 'timer_starts' && gameState?.current_phase !== 'timer_running'  && gameState?.current_phase !== 'timer_stopped') {
+      clearInterval(timerRef.current);
+      setTimerRunning(false);
+    }
+  }, [gameState?.current_phase]);
 
   // Cargar datos
   const fetchData = async () => {
@@ -96,7 +157,15 @@ export default function HostPlayPage({ params }) {
         const teamIdx = teamsArr.findIndex(t => t.id === teamId);
         if (teamIdx !== -1) {
           const oldPos = teamsArr[teamIdx].position || 0;
-          const newPos = Math.min(oldPos + value, boardRef.current.length - 1);
+          const boardLength = boardRef.current.length;
+          let newPos;
+          if (oldPos + value > boardLength - 1) {
+            // Rebote: calcula la posición rebotando desde la meta
+            newPos = (boardLength - 1) * 2 - (oldPos + value);
+            if (newPos < 0) newPos = 0; // Por si acaso
+          } else {
+            newPos = oldPos + value;
+          }
           teamsArr[teamIdx] = { ...teamsArr[teamIdx], position: newPos };
           // 3. Calcular categoría y palabra
           const category = boardRef.current[newPos];
@@ -110,13 +179,20 @@ export default function HostPlayPage({ params }) {
           };
           function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
           const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
-          // 4. Actualizar teams y game_state en Firestore
+          // 4. Calcular all_play (1/3 de probabilidad si la categoría no es 'all')
+          let allPlay = false;
+          if (category !== 'all') {
+            allPlay = Math.random() < (1/3);
+          }
+          // 5. Actualizar teams y game_state en Firestore
           await updateDoc(doc(db, 'rooms', room_id), { teams: teamsArr });
+          console.log(`[host_play] Tirada de dado: equipo ${teamId}, valor ${value}, nueva posición ${newPos}, categoría ${category}, palabra ${word}, all_play: ${allPlay}`);
           await updateDoc(doc(db, 'game_state', room_id), {
             current_phase: 'play',
             current_category: category,
             current_word: word,
             dice_value: value,
+            all_play: allPlay,
           });
         }
       }
@@ -135,6 +211,8 @@ export default function HostPlayPage({ params }) {
       }
       // Actualizar equipos desde el array embebido
       setTeams(Array.isArray(data?.teams) ? data.teams : []);
+      // Guardar round_time de rooms
+      setRoomConfig(data);
     });
     return () => {
       unsubState();
@@ -209,7 +287,7 @@ export default function HostPlayPage({ params }) {
     });
     // Agrupar equipos por casilla
     const teamsByCell = {};
-    teams.forEach(team => {
+    teams.forEach((team) => {
       const pos = team.position || 0;
       if (!teamsByCell[pos]) teamsByCell[pos] = [];
       teamsByCell[pos].push(team);
@@ -313,6 +391,81 @@ export default function HostPlayPage({ params }) {
     </div>
   );
 
+  const [countdown, setCountdown] = useState(3);
+  const countdownRef = useRef();
+
+  // Mostrar modal y cuenta atrás al detectar timer_starts
+  useEffect(() => {
+    if (gameState?.current_phase === 'timer_starts') {
+      setCountdown(3);
+      countdownRef.current = setInterval(() => {
+        setCountdown(prev => {
+          if (prev === 1) {
+            clearInterval(countdownRef.current);
+            setCountdown(0);
+            // El temporizador real se inicia en el otro efecto (timer_running)
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      setCountdown(3);
+      clearInterval(countdownRef.current);
+    }
+    return () => clearInterval(countdownRef.current);
+  }, [gameState?.current_phase]);
+
+  // Formato mm:ss
+  function formatTimer(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  // Componente SVG de barra de progreso circular (75%)
+  function CircularProgress({ value, max }) {
+    const percent = Math.max(0, Math.min(1, value / max));
+    // 75% de círculo: ángulo de 270º (de -225º a 45º)
+    const r = 70, cx = 80, cy = 80;
+    const full = 270; // grados
+    const startAngle = -225;
+    const endAngle = startAngle + full * percent;
+    // Calcula el arco SVG para 75% de círculo
+    function describeArc(cx, cy, r, startAngle, endAngle) {
+      const start = polarToCartesian(cx, cy, r, endAngle);
+      const end = polarToCartesian(cx, cy, r, startAngle);
+      const arcSweep = endAngle - startAngle <= 180 ? 0 : 1;
+      return [
+        "M", start.x, start.y,
+        "A", r, r, 0, arcSweep, 0, end.x, end.y
+      ].join(" ");
+    }
+    function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+      const angleInRadians = (angleInDegrees-90) * Math.PI / 180.0;
+      return {
+        x: centerX + (radius * Math.cos(angleInRadians)),
+        y: centerY + (radius * Math.sin(angleInRadians))
+      };
+    }
+    // Arco de fondo (gris, 75%)
+    const bgArc = describeArc(cx, cy, r, -225, 45);
+    // Arco de progreso (rojo, 75% proporcional)
+    const progArc = describeArc(cx, cy, r, -225, -225 + full * percent);
+    return (
+      <svg width="160" height="160">
+        {/* Fondo gris 75% */}
+        <path d={bgArc} stroke="#e5e7eb" strokeWidth="14" fill="none" strokeLinecap="round" />
+        {/* Progreso */}
+        {percent > 0 && (
+          <path d={progArc} stroke="#ef4444" strokeWidth="14" fill="none" strokeLinecap="round" />
+        )}
+      </svg>
+    );
+  }
+
+  // Mostrar modal mientras la fase sea timer_starts, timer_running o timer_stopped
+  const showTimerModal = ["timer_starts", "timer_running", "timer_stopped"].includes(gameState?.current_phase);
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="py-6 text-center">
@@ -322,6 +475,9 @@ export default function HostPlayPage({ params }) {
         {/* Columna izquierda: Categoría actual + Equipos */}
         <aside className="w-[320px] min-w-[220px] flex flex-col items-stretch gap-8">
           <div className="bg-white rounded-lg shadow p-6 text-center mb-2">
+            {gameState?.all_play && (
+              <div className="text-lg text-green-600 font-bold mb-1">¡Todos juegan!</div>
+            )}
             <div className="text-lg text-gray-500 mb-2">Categoría actual</div>
             <div
               className="text-2xl font-bold"
@@ -377,6 +533,29 @@ export default function HostPlayPage({ params }) {
           )}
         </section>
       </main>
+      {/* MODAL TEMPORIZADOR */}
+      {showTimerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[320px] min-h-[320px]">
+            {gameState?.current_phase === 'timer_starts' && countdown > 0 ? (
+              <div className="flex flex-col items-center justify-center">
+                <div className="text-7xl font-extrabold text-blue-700 mb-2">{countdown > 0 ? countdown : '¡YA!'}</div>
+                <div className="text-lg text-gray-700">Preparados para la ronda...</div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center">
+                <div className="relative flex items-center justify-center">
+                  <CircularProgress value={timer} max={typeof roomConfig?.round_time === 'number' ? roomConfig.round_time : 45} />
+                  <span className="absolute text-4xl text-red-600">{formatTimer(timer || 0)}</span>
+                </div>
+                <div className="text-lg text-gray-700 mt-4">
+                  {gameState?.current_phase === 'timer_stopped' ? '¡Se acabó!' : '¡Tiempo en marcha!'}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

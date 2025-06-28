@@ -45,14 +45,29 @@ export class GameLogic {
     };
     function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
     const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
+    // Calcular all_play (1/3 de probabilidad si la categoría no es 'all')
+    let allPlay = false;
+    if (category !== 'all') {
+      allPlay = Math.random() < (1/3);
+    }
     // Actualizar game_state
-    console.log(`Actualizando estado del juego: equipo ${nextTeam.id}, categoría ${category}, palabra ${word}`);
+    console.log(`Actualizando estado del juego: equipo ${nextTeam.id}, categoría ${category}, palabra ${word}, all_play: ${allPlay}`);
     await updateDoc(doc(db, 'game_state', room_id), {
       current_phase: 'play',
       current_turn_team: nextTeam.id,
       current_category: category,
       current_word: word,
+      all_play: allPlay,
     });
     // No hay canales, rely on onSnapshot
+  }
+
+  // Nueva función para iniciar la ronda
+  static async startRound(room_id, team_id) {
+    // Cambia la fase a 'timer_starts' solo si es el turno del equipo
+    const stateSnap = await getDoc(doc(db, 'game_state', room_id));
+    const state = stateSnap.exists() ? stateSnap.data() : null;
+    if (!state || state.current_turn_team !== team_id) return;
+    await updateDoc(doc(db, 'game_state', room_id), { current_phase: 'timer_starts' });
   }
 }
