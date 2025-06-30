@@ -1,21 +1,11 @@
 "use client";
 
-import React from 'react';
 import { db } from '../../../firebaseClient.js';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion } from 'firebase/firestore';
+import { collection, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion } from 'firebase/firestore';
 import { CATEGORY_WORDS } from '../../../utils/CategoryWords';
-
-const CATEGORIES = [
-  { key: 'all', label: 'Todos juegan' },
-  { key: 'person', label: 'Persona, animal o lugar' },
-  { key: 'object', label: 'Objeto' },
-  { key: 'action', label: 'Acción' },
-  { key: 'difficulty', label: 'Dificultad' },
-  { key: 'movies', label: 'Películas o series' },
-];
 
 function HostClient({ id }) {
   const router = useRouter();
@@ -168,14 +158,14 @@ function HostClient({ id }) {
             <div>
               <label className="block font-medium mb-2">Categorías habilitadas</label>
               <div className="flex flex-col gap-2">
-                {CATEGORIES.map((cat) => (
-                  <label key={cat.key} className="flex items-center gap-2 cursor-pointer">
+                {Object.keys(CATEGORY_WORDS).map((key) => (
+                  <label key={key} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={!!categories[cat.key]}
-                      onChange={() => handleCategoryToggle(cat.key)}
+                      checked={!!categories[key]}
+                      onChange={() => handleCategoryToggle(key)}
                     />
-                    <span>{cat.label}</span>
+                    <span>{key}</span>
                   </label>
                 ))}
               </div>

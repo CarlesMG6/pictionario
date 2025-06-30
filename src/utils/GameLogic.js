@@ -2,12 +2,23 @@ import { db } from '../firebaseClient.js';
 import { collection, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy } from 'firebase/firestore';
 import { CATEGORY_WORDS } from './CategoryWords';
 
+function getRandomElement(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return '';
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 export class GameLogic {
   static async success(room_id) {
     console.log(`Finalizando turno en sala ${room_id}`);
     // Cambiar fase a 'dice' (el equipo mantiene el turno)
     await updateDoc(doc(db, 'game_state', room_id), { current_phase: 'dice' });
     // No hay canales, rely on onSnapshot
+  }
+
+  static shouldAllPlay(category) {
+    // Devuelve true si la ronda debe ser all_play según la categoría
+    if (category === 'all') return true;
+    return Math.random() < (1/3);
   }
 
   static async fail(room_id) {
@@ -39,12 +50,11 @@ export class GameLogic {
     console.log(`Posición del equipo ${nextTeam.id}: ${pos}`);
     console.log(`Categoría del equipo ${nextTeam.id}: ${boardArr[pos]}`);
     const category = boardArr[pos];
+    console.log(`Categoría seleccionada: ${category}`);
+    console.log(`Palabras disponibles para la categoría ${category}:`, CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
     const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
-    // Calcular all_play (1/3 de probabilidad si la categoría no es 'all')
-    let allPlay = false;
-    if (category !== 'all') {
-      allPlay = Math.random() < (1/3);
-    }
+    // Calcular all_play usando el método extraído
+    const allPlay = shouldAllPlay(category);
     // Actualizar game_state
     console.log(`Actualizando estado del juego: equipo ${nextTeam.id}, categoría ${category}, palabra ${word}, all_play: ${allPlay}`);
     await updateDoc(doc(db, 'game_state', room_id), {

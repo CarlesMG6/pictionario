@@ -1,5 +1,14 @@
 // src/utils/CategoryWords.js
 
+export const CATEGORIES = [
+  { key: 'all', label: 'Todos juegan' },
+  { key: 'person', label: 'Persona, animal o lugar' },
+  { key: 'object', label: 'Objeto' },
+  { key: 'action', label: 'Acción' },
+  { key: 'difficulty', label: 'Dificultad' },
+  { key: 'movies', label: 'Películas o series' },
+];
+
 export const CATEGORY_WORDS = {
 all: [
                 "estrella", "avión", "canguro", "tormenta", "isla", "castillo", "jirafa", "espaguetis",

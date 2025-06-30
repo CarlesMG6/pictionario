@@ -4,16 +4,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { db } from '../../../firebaseClient.js';
 import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion } from 'firebase/firestore';
 import Image from "next/image";
-import { CATEGORY_WORDS } from '../../../utils/CategoryWords';
-
-const CATEGORIES = [
-  { key: 'all', label: 'Todos juegan' },
-  { key: 'person', label: 'Persona, animal o lugar' },
-  { key: 'object', label: 'Objeto' },
-  { key: 'action', label: 'Acción' },
-  { key: 'difficulty', label: 'Dificultad' },
-  { key: 'movies', label: 'Películas o series' },
-];
+import { CATEGORY_WORDS, CATEGORIES } from '../../../utils/CategoryWords';
+import GameLogic from "../../../utils/GameLogic";
 
 // Colores por categoría
 const CATEGORY_COLORS = {
@@ -183,11 +175,8 @@ export default function HostPlayPage({ params }) {
           // Palabra aleatoria (puedes usar GameLogic si lo prefieres)
           function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
           const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
-          // 4. Calcular all_play (1/3 de probabilidad si la categoría no es 'all')
-          let allPlay = false;
-          if (category !== 'all') {
-            allPlay = Math.random() < (1/3);
-          }
+          // 4. Calcular all_play usando GameLogic.shouldAllPlay
+          const allPlay = GameLogic.shouldAllPlay(category);
           // 5. Actualizar teams y game_state en Firestore
           await updateDoc(doc(db, 'rooms', room_id), { teams: teamsArr });
           console.log(`[host_play] Tirada de dado: equipo ${teamId}, valor ${value}, nueva posición ${newPos}, categoría ${category}, palabra ${word}, all_play: ${allPlay}`);
@@ -483,7 +472,9 @@ export default function HostPlayPage({ params }) {
               <div className="text-lg text-green-600 font-bold mb-1">¡Todos juegan!</div>
             )}
             <div className="text-lg text-gray-500 mb-2">Categoría actual</div>
-            <div className="text-2xl font-bold mb-2" style={{ color: CATEGORY_COLORS[gameState?.current_category] }}>{gameState?.current_category || '-'}</div>
+            <div className="text-2xl font-bold mb-2" style={{ color: CATEGORY_COLORS[gameState?.current_category] }}>
+              {CATEGORIES.find(cat => cat.key === gameState?.current_category)?.label || '-'}
+            </div>
           </div>
           {/* Listado vertical de categorías habilitadas debajo del recuadro de categoría actual */}
           {roomConfig?.categories && Array.isArray(roomConfig.categories) && (
