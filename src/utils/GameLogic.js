@@ -29,6 +29,10 @@ export class GameLogic {
         if (!teams || teams.length === 0) return;
         // Calcular siguiente equipo
         const idx = teams.findIndex(t => t.id === state.current_turn_team);
+        if (idx === -1) {
+            console.error(`No se ha podido encontrar el equipo actual en la lista de equipos: ${state.current_turn_team}`);
+            return;
+        }
         const nextIdx = (idx + 1) % teams.length;
         const nextTeam = teams[nextIdx];
         // Calcular categoría y palabra según la posición del equipo
@@ -78,6 +82,11 @@ export class GameLogic {
             return oldPosition + diceValue;
         }
     }
+
+    static rollDice() {
+        return Math.floor(Math.random() * 6) + 1;
+    }
+
     // Nueva función para iniciar la ronda
     static async startRound(room_id, team_id) {
         // Cambia la fase a 'timer_starts' solo si es el turno del equipo

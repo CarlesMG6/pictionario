@@ -164,39 +164,38 @@ export default function HostPlayPage({ params }) {
         const teamsArray = await getTeamsArray(room_id);
         const teamId = state.current_turn_team;
         const teamIndex = teamsArray.findIndex(t => t.id === teamId);
-        if (teamIndex !== -1) {
+        if (teamIndex === -1) {
           console.error('No se ha podido encontrar el equipo actual en la lista de equipos:', teamId);
         }
 
+        // 2. Tirar el dado
         const value = GameLogic.rollDice();
 
-        if (teamIndex !== -1) {
+        // 3. Actualizar posición del equipo
+        let newPosition = GameLogic.calculateTeamPosition(
+          teamsArray[teamIndex].position,
+          value,
+          boardRef.current.length
+        );
+        updateTeamPosition(teamsArray, teamIndex, newPosition);
 
-          let newPosition = GameLogic.calculateTeamPosition(
-            teamsArray[teamIndex].position,
-            value, 
-            boardRef.current.length
-          );
+        // 4. Calcular categoría y palabra
+        const category = boardRef.current[newPosition];
+        function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+        const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
 
-          updateTeamPosition(teamsArray, teamIndex, newPosition);
-          // 3. Calcular categoría y palabra
-          const category = boardRef.current[newPosition];
-          // Palabra aleatoria (puedes usar GameLogic si lo prefieres)
-          function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-          const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
-          // 4. Calcular all_play usando GameLogic.shouldAllPlay
-          const allPlay = GameLogic.shouldAllPlay(category);
-          // 5. Actualizar teams y game_state en Firestore
-
-          console.log(`[host_play] Tirada de dado: equipo ${teamId}, valor ${value}, nueva posición ${newPosition}, categoría ${category}, palabra ${word}, all_play: ${allPlay}`);
-          await updateDoc(doc(db, 'game_state', room_id), {
-            current_phase: 'play',
-            current_category: category,
-            current_word: word,
-            dice_value: value,
-            all_play: allPlay,
-          });
-        }
+        // 5. Calcular all_play
+        const allPlay = GameLogic.shouldAllPlay(category);
+        
+        // 6. Actualizar game_state en Firestore
+        console.log(`[host_play] Tirada de dado: equipo ${teamId}, valor ${value}, nueva posición ${newPosition}, categoría ${category}, palabra ${word}, all_play: ${allPlay}`);
+        await updateDoc(doc(db, 'game_state', room_id), {
+          current_phase: 'play',
+          current_category: category,
+          current_word: word,
+          dice_value: value,
+          all_play: allPlay,
+        });
       }
     });
     // Suscripción a configuración de sala y equipos embebidos
