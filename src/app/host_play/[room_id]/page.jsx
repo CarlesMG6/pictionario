@@ -91,7 +91,7 @@ export default function HostPlayPage({ params }) {
 
   // Si la fase deja de ser 'timer_starts', 'timer_running' detener temporizador
   useEffect(() => {
-    if (gameState?.current_phase !== 'timer_starts' && gameState?.current_phase !== 'timer_running'  && gameState?.current_phase !== 'timer_stopped') {
+    if (gameState?.current_phase !== 'timer_starts' && gameState?.current_phase !== 'timer_running' && gameState?.current_phase !== 'timer_stopped') {
       clearInterval(timerRef.current);
       setTimerRunning(false);
     }
@@ -140,6 +140,17 @@ export default function HostPlayPage({ params }) {
     }
   };
 
+  async function getTeamsArray(room_id) {
+    const roomSnap = await getDoc(doc(db, 'rooms', room_id));
+    const roomData = roomSnap.data();
+    return Array.isArray(roomData?.teams) ? [...roomData.teams] : [];
+  }
+
+  async function updateTeamPosition(teamsArray, teamIndex, newPosition) {
+    teamsArray[teamIndex] = { ...teamsArray[teamIndex], position: newPosition };
+    await updateDoc(doc(db, 'rooms', room_id), { teams: teamsArray });
+  }
+
   useEffect(() => {
     if (!room_id) return;
     // Suscripción a game_state
@@ -148,38 +159,36 @@ export default function HostPlayPage({ params }) {
       setGameState(state);
       // Lógica de tirada de dado automática si la fase es 'dice_rolling'
       if (state && state.current_phase === 'dice_rolling') {
-        // Solo el host ejecuta la lógica
-        // 1. Tirar dado
-        const value = Math.floor(Math.random() * 6) + 1;
-        // 2. Actualizar posición del equipo
+
+        // 1. Obtener equipos
+        const teamsArray = await getTeamsArray(room_id);
         const teamId = state.current_turn_team;
-        // Obtener equipos actuales
-        const roomSnap = await getDoc(doc(db, 'rooms', room_id));
-        const roomData = roomSnap.data();
-        let teamsArr = Array.isArray(roomData?.teams) ? [...roomData.teams] : [];
-        const teamIdx = teamsArr.findIndex(t => t.id === teamId);
-        if (teamIdx !== -1) {
-          const oldPos = teamsArr[teamIdx].position || 0;
-          const boardLength = boardRef.current.length;
-          let newPos;
-          if (oldPos + value > boardLength - 1) {
-            // Rebote: calcula la posición rebotando desde la meta
-            newPos = (boardLength - 1) * 2 - (oldPos + value);
-            if (newPos < 0) newPos = 0; // Por si acaso
-          } else {
-            newPos = oldPos + value;
-          }
-          teamsArr[teamIdx] = { ...teamsArr[teamIdx], position: newPos };
+        const teamIndex = teamsArray.findIndex(t => t.id === teamId);
+        if (teamIndex !== -1) {
+          console.error('No se ha podido encontrar el equipo actual en la lista de equipos:', teamId);
+        }
+
+        const value = GameLogic.rollDice();
+
+        if (teamIndex !== -1) {
+
+          let newPosition = GameLogic.calculateTeamPosition(
+            teamsArray[teamIndex].position,
+            value, 
+            boardRef.current.length
+          );
+
+          updateTeamPosition(teamsArray, teamIndex, newPosition);
           // 3. Calcular categoría y palabra
-          const category = boardRef.current[newPos];
+          const category = boardRef.current[newPosition];
           // Palabra aleatoria (puedes usar GameLogic si lo prefieres)
           function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
           const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
           // 4. Calcular all_play usando GameLogic.shouldAllPlay
           const allPlay = GameLogic.shouldAllPlay(category);
           // 5. Actualizar teams y game_state en Firestore
-          await updateDoc(doc(db, 'rooms', room_id), { teams: teamsArr });
-          console.log(`[host_play] Tirada de dado: equipo ${teamId}, valor ${value}, nueva posición ${newPos}, categoría ${category}, palabra ${word}, all_play: ${allPlay}`);
+
+          console.log(`[host_play] Tirada de dado: equipo ${teamId}, valor ${value}, nueva posición ${newPosition}, categoría ${category}, palabra ${word}, all_play: ${allPlay}`);
           await updateDoc(doc(db, 'game_state', room_id), {
             current_phase: 'play',
             current_category: category,
@@ -219,10 +228,10 @@ export default function HostPlayPage({ params }) {
     setDiceRolling({ teamId, value });
     // Actualizar posición en teams
     const team = teams.find((t) => t.id === teamId);
-    const newPos = Math.min((team?.position || 0) + value, boardRef.current.length - 1);
-    await supabase.from("teams").update({ position: newPos }).eq("id", teamId);
+    const newPosition = Math.min((team?.position || 0) + value, boardRef.current.length - 1);
+    await supabase.from("teams").update({ position: newPosition }).eq("id", teamId);
     // Calcular categoría y palabra
-    const category = boardRef.current[newPos];
+    const category = boardRef.current[newPosition];
     // Aquí deberías obtener una palabra aleatoria de la categoría (puedes usar GameLogic)
     // ...
     // Actualizar game_state
@@ -359,9 +368,8 @@ export default function HostPlayPage({ params }) {
       {teams.map((team) => (
         <div
           key={team.id}
-          className={`flex items-center gap-2 p-2 rounded ${
-            gameState?.current_turn_team === team.id ? "bg-blue-100 border-l-4 border-blue-500" : ""
-          }`}
+          className={`flex items-center gap-2 p-2 rounded ${gameState?.current_turn_team === team.id ? "bg-blue-100 border-l-4 border-blue-500" : ""
+            }`}
         >
           <Image
             src={team.icon_url || "/vercel.svg"}
@@ -434,7 +442,7 @@ export default function HostPlayPage({ params }) {
       ].join(" ");
     }
     function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
-      const angleInRadians = (angleInDegrees-90) * Math.PI / 180.0;
+      const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
       return {
         x: centerX + (radius * Math.cos(angleInRadians)),
         y: centerY + (radius * Math.sin(angleInRadians))
