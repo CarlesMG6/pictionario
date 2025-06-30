@@ -5,7 +5,9 @@ import { db } from '../../../firebaseClient.js';
 import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion } from 'firebase/firestore';
 import Image from "next/image";
 import { CATEGORY_WORDS, CATEGORIES } from '../../../utils/CategoryWords';
-import GameLogic from "../../../utils/GameLogic";
+import { GameLogic } from "../../../utils/GameLogic";
+import Dice3D from "../../../components/Dice3D";
+import "../../../components/Dice3D.css";
 
 // Colores por categoría
 const CATEGORY_COLORS = {
@@ -36,6 +38,10 @@ export default function HostPlayPage({ params }) {
     value: null,
   });
   const [roomConfig, setRoomConfig] = useState(null);
+
+  // Estado para mostrar el modal de animación de dado (debe ir antes de cualquier useEffect que lo use)
+  const [showDiceModal, setShowDiceModal] = useState(false);
+  const [diceValue, setDiceValue] = useState(null);
 
   // Temporizador para la ronda
   const [timer, setTimer] = useState(null);
@@ -159,7 +165,6 @@ export default function HostPlayPage({ params }) {
       setGameState(state);
       // Lógica de tirada de dado automática si la fase es 'dice_rolling'
       if (state && state.current_phase === 'dice_rolling') {
-
         // 1. Obtener equipos
         const teamsArray = await getTeamsArray(room_id);
         const teamId = state.current_turn_team;
@@ -168,8 +173,15 @@ export default function HostPlayPage({ params }) {
           console.error('No se ha podido encontrar el equipo actual en la lista de equipos:', teamId);
         }
 
-        // 2. Tirar el dado
+        // 2. Tirar el dado (pero mostrar animación antes de usar el valor)
         const value = GameLogic.rollDice();
+        setDiceValue(value);
+        setShowDiceModal(true);
+        console.log("[host_play] Tirada de dado automática: equipo", teamId, "valor", value);
+        // Esperar a que termine la animación (ej: 2.2s) + 2s extra para mostrar el resultado
+        await new Promise(res => setTimeout(res, 2200 + 3000));
+        console.log("[host_play] Animación de dado terminada, actualizando estado del juego...");
+        setShowDiceModal(false);
 
         // 3. Actualizar posición del equipo
         let newPosition = GameLogic.calculateTeamPosition(
@@ -196,6 +208,7 @@ export default function HostPlayPage({ params }) {
           dice_value: value,
           all_play: allPlay,
         });
+        // La animación de movimiento se dispara tras cerrar el modal (ver useEffect abajo)
       }
     });
     // Suscripción a configuración de sala y equipos embebidos
@@ -221,37 +234,13 @@ export default function HostPlayPage({ params }) {
     };
   }, [room_id]);
 
-  // Lógica para tirar dado
-  /*const handleRollDice = async (teamId: string) => {
-    const value = Math.floor(Math.random() * 6) + 1;
-    setDiceRolling({ teamId, value });
-    // Actualizar posición en teams
-    const team = teams.find((t) => t.id === teamId);
-    const newPosition = Math.min((team?.position || 0) + value, boardRef.current.length - 1);
-    await supabase.from("teams").update({ position: newPosition }).eq("id", teamId);
-    // Calcular categoría y palabra
-    const category = boardRef.current[newPosition];
-    // Aquí deberías obtener una palabra aleatoria de la categoría (puedes usar GameLogic)
-    // ...
-    // Actualizar game_state
-    await supabase
-      .from("game_state")
-      .update({
-        current_category: category,
-        current_word: "(palabra aleatoria)", // TODO: integrar GameLogic
-        current_phase: "play",
-        dice_value: value,
-      })
-      .eq("room_id", room_id);
-    // Lanzar evento
-    await supabase.channel(`room-${room_id}`).send({
-      type: "broadcast",
-      event: "roll_dice",
-      payload: { team_id: teamId, value },
-    });
-    await supabase.channel(`room-${room_id}`).send({ type: "broadcast", event: "update_match", payload: {} });
-  };
-*/
+  // Sincroniza visualPositions con teams al cargar equipos o tras cerrar el modal del dado
+  useEffect(() => {
+    // Si el modal de dado está abierto, no actualices visualPositions (espera a que se cierre)
+    if (showDiceModal) return;
+    // Cuando cambia teams, actualiza visualPositions para animar la pieza
+    setVisualPositions(teams.map(t => t.position || 0));
+  }, [teams, showDiceModal]);
 
   // Calcula la posición visual de una casilla en el tablero en forma de S
   function getSBoardPosition(index, cols = 7, rowsPerZigzag = 2) {
@@ -273,6 +262,42 @@ export default function HostPlayPage({ params }) {
     return { x, y };
   }
 
+  // Estado para posiciones visuales de las piezas
+  const [visualPositions, setVisualPositions] = useState([]); // Posiciones visuales para animación
+  const animationTimeoutRef = useRef();
+
+  // Sincronizar visualPositions con la posición real al cargar equipos o tras animación
+  useEffect(() => {
+    if (!teams || teams.length === 0) return;
+    setVisualPositions((prev) => {
+      const updated = { ...prev };
+      teams.forEach((team) => {
+        // Si no existe, o si la posición real cambió por recarga, sincroniza
+        if (updated[team.id] === undefined || Math.abs(updated[team.id] - team.position) > 6) {
+          updated[team.id] = team.position;
+        }
+      });
+      return updated;
+    });
+  }, [teams]);
+
+  // Animar movimiento de pieza tras cerrar el modal del dado
+  useEffect(() => {
+    if (!showDiceModal && diceValue && gameState?.current_phase === 'play') {
+      // Buscar equipo activo y su nueva posición
+      const teamId = gameState.current_turn_team;
+      const team = teams.find(t => t.id === teamId);
+      if (!team) return;
+      setVisualPositions((prev) => ({ ...prev, [teamId]: prev[teamId] ?? team.position })); // Asegura valor inicial
+      // Animar desde la posición anterior a la nueva
+      animationTimeoutRef.current = setTimeout(() => {
+        setVisualPositions((prev) => ({ ...prev, [teamId]: team.position }));
+      }, 50); // Pequeño delay para asegurar render
+      // Limpiar timeout si cambia
+      return () => clearTimeout(animationTimeoutRef.current);
+    }
+  }, [showDiceModal, diceValue, gameState?.current_phase, teams]);
+
   // Render tablero en forma de S
   const renderBoard = () => {
     const cols = 9;
@@ -286,12 +311,13 @@ export default function HostPlayPage({ params }) {
       const pos = getSBoardPosition(i, cols, rowsPerZigzag);
       if (pos.y > maxY) maxY = pos.y;
     });
-    // Agrupar equipos por casilla
+    // Agrupar equipos por casilla (para offsets visuales)
     const teamsByCell = {};
-    teams.forEach((team) => {
-      const pos = team.position || 0;
+    teams.forEach((team, idx) => {
+      // Usar visualPositions para la posición visual
+      const pos = visualPositions[idx] ?? team.position ?? 0;
       if (!teamsByCell[pos]) teamsByCell[pos] = [];
-      teamsByCell[pos].push(team);
+      teamsByCell[pos].push({ ...team, visualIdx: idx });
     });
     // Esquinas para hasta 4 equipos en la misma casilla
     const pieceOffsets = [
@@ -339,11 +365,12 @@ export default function HostPlayPage({ params }) {
             return (
               <div
                 key={team.id}
-                className="absolute"
+                className="absolute team-piece-anim"
                 style={{
                   left: `${pos.x * cellSize + offset.x + (cellSize - pieceSize) / 2 * (pieceOffsets[idx] ? 0 : 1)}px`,
                   top: `${pos.y * cellSize + offset.y + (cellSize - pieceSize) / 2 * (pieceOffsets[idx] ? 0 : 1)}px`,
                   zIndex: 2,
+                  transition: 'left 0.7s cubic-bezier(.4,1.6,.4,1), top 0.7s cubic-bezier(.4,1.6,.4,1)',
                 }}
               >
                 <Image
@@ -556,6 +583,15 @@ export default function HostPlayPage({ params }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* MODAL ANIMACIÓN DADO */}
+      {showDiceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-green-700 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[320px] min-h-[320px]">
+            <Dice3D value={diceValue} animate />
+            <div className="mt-4 text-2xl font-bold">¡Tirando el dado!</div>
           </div>
         </div>
       )}

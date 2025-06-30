@@ -1,0 +1,46 @@
+.dice3d-container {
+  perspective: 600px;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dice3d {
+  width: 100px;
+  height: 100px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 3.5s cubic-bezier(.23,1.02,.64,1.01);
+}
+.dice3d.roll {
+  animation: dice-roll-smooth 3.5s cubic-bezier(.23,1.02,.64,1.01) both;
+}
+@keyframes dice-roll-smooth {
+  0% {
+    transform: rotateX(1440deg) rotateY(1440deg) rotateZ(720deg);
+  }
+  100% {
+    transform: var(--final-transform);
+  }
+}
+.face {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: #fff;
+  border-radius: 16px;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+.face1 { transform: rotateY(0deg) translateZ(50px); }
+.face2 { transform: rotateX(90deg) translateZ(50px); }
+.face3 { transform: rotateY(90deg) translateZ(50px); }
+.face4 { transform: rotateY(-90deg) translateZ(50px); }
+.face5 { transform: rotateX(-90deg) translateZ(50px); }
+.face6 { transform: rotateY(180deg) translateZ(50px); }
