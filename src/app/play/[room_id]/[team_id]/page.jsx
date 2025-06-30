@@ -19,6 +19,7 @@ export default function PlayPage({ params }) {
   const handleSuccess = async () => {
     if (!room_id) return;
     setIsProcessing(true);
+    console.log('/play -> Acierto en la ronda');
     await GameLogic.success(room_id);
     setShowStartRound(false);
     setShowWord(false);
@@ -27,7 +28,7 @@ export default function PlayPage({ params }) {
   const handleFail = async () => {
     if (!room_id) return;
     setIsProcessing(true);
-    console.log('Fallo en la ronda');
+    console.log('/play -> Fallo en la ronda');
     await GameLogic.fail(room_id);
     setShowStartRound(false);
     setShowWord(false);
