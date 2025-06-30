@@ -4,12 +4,14 @@ import { CATEGORY_WORDS } from './CategoryWords';
 
 export class GameLogic {
   static async success(room_id) {
+    console.log(`Finalizando turno en sala ${room_id}`);
     // Cambiar fase a 'dice' (el equipo mantiene el turno)
     await updateDoc(doc(db, 'game_state', room_id), { current_phase: 'dice' });
     // No hay canales, rely on onSnapshot
   }
 
   static async fail(room_id) {
+    console.log(`Fallando turno en sala ${room_id}`);
     // Obtener estado actual
     const stateSnap = await getDoc(doc(db, 'game_state', room_id));
     const state = stateSnap.exists() ? stateSnap.data() : null;
