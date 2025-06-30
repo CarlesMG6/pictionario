@@ -77,7 +77,7 @@ export class GameLogic {
         if (oldPosition + diceValue > boardLength - 1) {
             // Rebote: calcula la posición rebotando desde la meta
             newPos = (boardLength - 1) * 2 - (oldPosition + diceValue);
-            return max(0, newPos);
+            return Math.max(0, newPos);
         } else {
             return oldPosition + diceValue;
         }
