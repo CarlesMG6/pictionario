@@ -4,20 +4,10 @@ import React, { useEffect, useState, useRef } from "react";
 import { db } from '../../../firebaseClient.js';
 import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion } from 'firebase/firestore';
 import Image from "next/image";
-import { CATEGORY_WORDS, CATEGORIES } from '../../../utils/CategoryWords';
+import { CATEGORY_WORDS, CATEGORIES, CATEGORY_COLORS } from '../../../utils/CategoryWords';
 import { GameLogic } from "../../../utils/GameLogic";
 import Dice3D from "../../../components/Dice3D";
 import "../../../components/Dice3D.css";
-
-// Colores por categoría
-const CATEGORY_COLORS = {
-  all: "#fbbf24", // amarillo
-  object: "#60a5fa", // azul
-  person: "#f87171", // rojo
-  action: "#34d399", // verde
-  movies: "#a78bfa", // violeta
-  difficulty: "#f472b6", // rosa
-};
 
 const BOARD_SIZES = {
   corta: 23,
@@ -489,6 +479,14 @@ export default function HostPlayPage({ params }) {
     );
   }
 
+
+  // MODAL FIN DE PARTIDA
+  const showEndModal = gameState?.current_phase === 'end';
+  const rankingTeams = showEndModal
+    ? (gameState?.ranking || []).map(id => teams.find(t => t.id === id)).filter(Boolean)
+    : [];
+  const medals = ['🥇', '🥈', '🥉'];
+
   // Mostrar modal mientras la fase sea timer_starts, timer_running o timer_stopped
   const showTimerModal = ["timer_starts", "timer_running", "timer_stopped"].includes(gameState?.current_phase);
 
@@ -514,7 +512,7 @@ export default function HostPlayPage({ params }) {
             <div className="flex flex-col gap-2 mt-4">
               <div className="text-base font-bold text-gray-700 mb-1">Categorías</div>
               {CATEGORIES.filter(cat => roomConfig.categories.includes(cat.key)).map(cat => (
-                <div key={cat.key} className="flex items-center px-3 py-2 rounded-lg shadow text-base font-semibold" style={{ background: CATEGORY_COLORS[cat.key] || '#eee', color: '#222' }}>
+                <div key={cat.key} className="flex items-center px-3 py-2 rounded-lg shadow text-base font-semibold" style={{ background: cat.color || '#eee', color: '#222' }}>
                   {cat.label}
                 </div>
               ))}
@@ -594,6 +592,55 @@ export default function HostPlayPage({ params }) {
           </div>
         </div>
       )}
+      {/* MODAL FIN DE PARTIDA */}
+      {showEndModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[340px] min-h-[340px]">
+            <div className="text-4xl font-extrabold text-green-700 mb-4">¡Enhorabuena!</div>
+            <div className="text-xl font-bold mb-6">El equipo ganador es:</div>
+            <div className="flex items-center gap-3 mb-8">
+              <Image src={teams.find(t => t.id === gameState.winner_team)?.icon_url || '/vercel.svg'} alt="icono ganador" width={48} height={48} className="rounded-full border-2 border-yellow-400" />
+              <span className="text-2xl font-bold text-yellow-600">{teams.find(t => t.id === gameState.winner_team)?.name}</span>
+            </div>
+            <div className="w-full max-w-xs mx-auto">
+              <div className="text-lg font-semibold mb-2 text-center">Clasificación final</div>
+              <div className="flex flex-col gap-2">
+                {rankingTeams.map((team, idx) => (
+                  <div key={team.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-100">
+                    <span className="text-2xl">{medals[idx] || ''}</span>
+                    <Image src={team.icon_url || '/vercel.svg'} alt="icono" width={32} height={32} className="rounded-full" />
+                    <span className="font-bold text-lg">{team.name}</span>
+                    <span className="ml-auto text-gray-500">#{idx + 1}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+
+// Lógica para acertar (esto debe llamarse cuando el host pulse "acertado")
+async function checkAndEndGameIfNeeded({ teams, board, teamId, db, room_id }) {
+  // Obtener la posición del equipo actual
+  const team = teams.find(t => t.id === teamId);
+  if (!team) return false;
+  const lastCell = board.length - 1;
+  if (team.position >= lastCell) {
+    // Setear fase end y guardar ranking
+    // Ordenar equipos por posición descendente
+    const ranking = [...teams].sort((a, b) => (b.position || 0) - (a.position || 0));
+    await updateDoc(doc(db, 'game_state', room_id), {
+      current_phase: 'end',
+      winner_team: teamId,
+      ranking: ranking.map(t => t.id),
+    });
+    return true;
+  }
+  return false;
+}
+
+export { checkAndEndGameIfNeeded };

@@ -1,39 +1,98 @@
-# pictionario
-Online pictionary. Create room with a pc and join with your phone to control the game.
+# Pictionario Online
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Pictionario online multijugador: crea una sala desde el PC y únete con tu móvil para jugar en tiempo real con amigos. El sistema gestiona turnos, tablero, dado animado, temporizador, categorías y palabras, todo sincronizado mediante Firebase/Firestore.
 
-## Getting Started
+---
 
-First, run the development server:
+## Stack Tecnológico
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Next.js** (React, app directory, SSR/SSG)
+- **Firebase Firestore** (base de datos en tiempo real)
+- **Firebase Hosting** (opcional, recomendado Vercel)
+- **TailwindCSS** (estilos y diseño responsive)
+- **Animaciones 3D**: dado animado con CSS/React
+- **Vercel** (despliegue recomendado, SSR compatible)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Instalación y Despliegue
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Clona el repositorio:**
+   ```bash
+   git clone <repo-url>
+   cd pictionario
+   ```
 
-## Learn More
+2. **Instala dependencias:**
+   ```bash
+   npm install
+   # o yarn install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. **Configura Firebase:**
+   - Crea un proyecto en [Firebase Console](https://console.firebase.google.com/).
+   - Habilita Firestore Database.
+   - Obtén las credenciales web y copia el objeto de configuración en `src/firebaseClient.js`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. **Arranca en desarrollo:**
+   ```bash
+   npm run dev
+   # o yarn dev
+   ```
+   Accede a [http://localhost:3000](http://localhost:3000)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+5. **Despliegue en Vercel:**
+   - Sube el repo a GitHub.
+   - Conecta el repo en [Vercel](https://vercel.com/), añade las variables de entorno de Firebase.
+   - Deploy automático.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Funcionamiento y Flujo de Juego
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 1. Crear y Unirse a una Sala
+- Un jugador (host) crea una sala desde el PC.
+- Los demás se unen escaneando el QR o introduciendo el código desde el móvil.
+- El host configura categorías, duración y equipos.
+
+### 2. Turnos y Tablero
+- El tablero se genera alternando las categorías seleccionadas.
+- Cada equipo tiene una pieza con icono personalizado.
+- El turno avanza automáticamente entre equipos.
+
+### 3. Tirada de Dado y Movimiento
+- El host tira el dado (animación 3D).
+- Tras la animación, la pieza del equipo se mueve suavemente a la nueva casilla.
+- Si se rebasa la meta, la pieza rebota hacia atrás.
+
+### 4. Categorías y Palabras
+- Cada casilla tiene una categoría (color y nombre).
+- Se muestra una palabra aleatoria de la categoría para que el equipo la dibuje.
+- Hay rondas "¡Todos juegan!" (all_play) con probabilidad 1/3 en categorías normales.
+
+### 5. Temporizador y Sonidos
+- El host inicia el temporizador (cuenta atrás visual y sonora).
+- Avisos sonoros en los últimos segundos y al finalizar el tiempo.
+- Barra de progreso SVG animada.
+
+### 6. Experiencia Visual
+- Animación de dado 3D y movimiento de piezas.
+- UI adaptada a móvil y escritorio.
+- Colores y mensajes contextuales según fase y turno.
+
+---
+
+## Personalización
+- Palabras y categorías centralizadas en `src/utils/CategoryWords.js`.
+- Puedes editar o añadir nuevas categorías fácilmente.
+
+---
+
+## Notas
+- El sistema es reactivo: todos los jugadores ven los cambios en tiempo real.
+- No requiere backend propio, solo una cuenta de Firebase.
+- Compatible con despliegue en Vercel (SSR listo para producción).
+
+---
+
+¿Dudas? Abre un issue o contacta al autor.

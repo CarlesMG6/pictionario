@@ -30,10 +30,9 @@ function getRandomIcon(currentIcon) {
   return filtered[Math.floor(Math.random() * filtered.length)];
 }
 
-export default function JoinPage({ params }) {
+function JoinPage({ params }) {
+  const id = params.id;
   const router = useRouter();
-  const { id } = params;
-
   const [icon, setIcon] = useState(() => getRandomIcon());
   const [teamName, setTeamName] = useState('');
   const [memberInput, setMemberInput] = useState('');
@@ -43,6 +42,8 @@ export default function JoinPage({ params }) {
   const [teamId, setTeamId] = useState(null);
   const [teams, setTeams] = useState([]);
   const [roomUuid, setRoomUuid] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [expelled, setExpelled] = useState(false);
 
   useEffect(() => {
     if (!id || id.length !== 6) {
@@ -61,9 +62,17 @@ export default function JoinPage({ params }) {
       // Suscribirse al documento de la sala
       unsubRoom = onSnapshot(doc(db, 'rooms', roomUuid), (roomSnap) => {
         const data = roomSnap.data();
+        setTeams(Array.isArray(data?.teams) ? data.teams : []);
         // Si playing es true y el equipo ya está confirmado, redirigir
         if (data?.playing && confirmed && teamId) {
           router.replace(`/play/${roomUuid}/${teamId}`);
+        }
+        // Si el equipo actual no está en la lista, ha sido expulsado
+        if (confirmed && teamId && (!data?.teams || !data.teams.some(t => t.id === teamId))) {
+          setExpelled(true);
+          setTimeout(() => {
+            router.replace('/');
+          }, 2000);
         }
       });
     }
@@ -139,7 +148,51 @@ export default function JoinPage({ params }) {
     }
   };
 
-  if (confirmed) {
+  // Editar equipo tras confirmar
+  const handleEdit = () => {
+    setEditMode(true);
+  };
+
+  // Guardar cambios de edición
+  const handleUpdate = async () => {
+    if (!teamName.trim()) {
+      setError('Introduce un nombre de equipo.');
+      return;
+    }
+    if (members.length === 0) {
+      setError('Introduce al menos un miembro.');
+      return;
+    }
+    setError('');
+    // Buscar la sala por código para obtener el room_id (uuid)
+    const roomsQuery = query(collection(db, 'rooms'), where('code', '==', id));
+    const roomsSnap = await getDocs(roomsQuery);
+    if (roomsSnap.empty) {
+      setError('No se ha encontrado la sala.');
+      return;
+    }
+    const roomDoc = roomsSnap.docs[0];
+    const roomId = roomDoc.id;
+    // Actualizar el equipo en el array de teams
+    const roomSnap = await getDoc(doc(db, 'rooms', roomId));
+    const data = roomSnap.data();
+    const teamsArr = Array.isArray(data?.teams) ? data.teams : [];
+    const updatedTeams = teamsArr.map(t => t.id === teamId ? { ...t, name: teamName, icon_url: icon, members } : t);
+    await updateDoc(doc(db, 'rooms', roomId), { teams: updatedTeams });
+    setEditMode(false);
+  };
+
+  if (expelled) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8">
+        <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-8 flex flex-col items-center w-full max-w-md">
+          <div className="text-2xl font-bold mb-4 text-center text-red-700 dark:text-red-400">Has sido expulsado de la sala.</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (confirmed && !editMode) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-8">
         <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-8 flex flex-col items-center w-full max-w-md">
@@ -157,6 +210,95 @@ export default function JoinPage({ params }) {
               ))}
             </div>
           </div>
+          <button
+            className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded"
+            onClick={handleEdit}
+            type="button"
+          >
+            Editar datos
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Si está en modo edición tras confirmar
+  if (confirmed && editMode) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8">
+        <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-8 flex flex-col items-center w-full max-w-md">
+          <div className="text-2xl font-bold mb-4 text-center text-blue-700 dark:text-blue-400">Edita los datos del equipo</div>
+          <div className="relative mb-6 flex items-center justify-center">
+            <div className="rounded-full border-4 border-blue-400 bg-white dark:bg-neutral-900 flex items-center justify-center" style={{ width: 112, height: 112, padding: 8 }}>
+              <Image src={icon} alt="icono equipo" width={96} height={96} className="object-contain" />
+            </div>
+            <button
+              className="absolute bottom-0 right-0 bg-white dark:bg-neutral-800 rounded-full p-2 shadow hover:bg-gray-100 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700"
+              onClick={() => setIcon(getRandomIcon(icon))}
+              type="button"
+              aria-label="Cambiar icono"
+            >
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 1 1-3.6-7.2" />
+                <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M21 3v6h-6" />
+              </svg>
+            </button>
+          </div>
+          <div className="w-full mb-4">
+            <label className="block font-medium mb-1">Nombre del equipo</label>
+            <input
+              className="w-full border rounded px-3 py-2"
+              value={teamName}
+              onChange={e => setTeamName(e.target.value)}
+              placeholder="Introduce el nombre del equipo"
+              maxLength={32}
+            />
+          </div>
+          <div className="w-full mb-4">
+            <label className="block font-medium mb-1">Miembros</label>
+            <div className="flex gap-2">
+              <input
+                className="flex-1 border rounded px-3 py-2"
+                value={memberInput}
+                onChange={e => setMemberInput(e.target.value)}
+                onKeyDown={handleMemberInputKeyDown}
+                onBlur={handleMemberInputBlur}
+                placeholder="Añade un miembro y pulsa +"
+                maxLength={24}
+              />
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded"
+                type="button"
+                onClick={handleAddMember}
+                aria-label="Añadir miembro"
+              >
+                +
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {members.map(name => (
+                <span key={name} className="flex items-center bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-sm">
+                  {name}
+                  <button
+                    className="ml-1 text-red-500 hover:text-red-700"
+                    onClick={() => handleRemoveMember(name)}
+                    type="button"
+                    aria-label="Eliminar miembro"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+          {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
+          <button
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded transition-colors text-lg mt-4"
+            onClick={handleUpdate}
+            type="button"
+          >
+            Confirmar cambios
+          </button>
         </div>
       </div>
     );
@@ -241,3 +383,5 @@ export default function JoinPage({ params }) {
     </div>
   );
 }
+
+export default JoinPage;

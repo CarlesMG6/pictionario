@@ -4,8 +4,8 @@ import { db } from '../../../firebaseClient.js';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { collection, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion } from 'firebase/firestore';
-import { CATEGORY_WORDS } from '../../../utils/CategoryWords';
+import { collection, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { CATEGORY_WORDS, CATEGORIES } from '../../../utils/CategoryWords';
 
 function HostClient({ id }) {
   const router = useRouter();
@@ -20,6 +20,8 @@ function HostClient({ id }) {
     difficulty: false,
     movies: false,
   });
+  const [startAttempted, setStartAttempted] = useState(false);
+  const [startError, setStartError] = useState("");
 
   useEffect(() => {
     if (!id || id.length !== 6) {
@@ -46,11 +48,25 @@ function HostClient({ id }) {
     };
   }, [id, router]);
 
+  // Nuevo efecto: si hay error de equipos y ya hay 2 o más, limpiar error
+  useEffect(() => {
+    if (startAttempted && startError && teams.length >= 2) {
+      setStartError("");
+    }
+  }, [teams, startAttempted, startError]);
+
   const handleCategoryToggle = (key) => {
     setCategories((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleStartGame = async () => {
+    setStartAttempted(true);
+    if (teams.length < 2) {
+      setStartError("Deben haber al menos 2 equipos para empezar la partida.");
+      return;
+    } else {
+      setStartError("");
+    }
     // Buscar la sala por código (campo 'code')
     const roomsQuery = query(collection(db, 'rooms'), where('code', '==', id));
     const roomsSnap = await getDocs(roomsQuery);
@@ -95,6 +111,21 @@ function HostClient({ id }) {
     router.push(`/host_play/${room_id}`);
   };
 
+  // Eliminar equipo
+  const handleRemoveTeam = async (teamId) => {
+    // Buscar la sala por código (campo 'code')
+    const roomsQuery = query(collection(db, 'rooms'), where('code', '==', id));
+    const roomsSnap = await getDocs(roomsQuery);
+    if (roomsSnap.empty) return;
+    const roomDoc = roomsSnap.docs[0];
+    const roomUuid = roomDoc.id;
+    // Obtener equipos actuales
+    const roomSnap = await getDoc(doc(db, 'rooms', roomUuid));
+    const data = roomSnap.data();
+    const newTeams = (Array.isArray(data?.teams) ? data.teams : []).filter(t => t.id !== teamId);
+    await updateDoc(doc(db, 'rooms', roomUuid), { teams: newTeams });
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8">
       <h1 className="text-7xl font-extrabold mb-4 text-center">{id}</h1>
@@ -103,11 +134,16 @@ function HostClient({ id }) {
       </p>
       <div className="flex flex-col md:flex-row gap-8 w-full max-w-5xl">
         {/* Columna equipos */}
-        <div className="flex-1 bg-white dark:bg-neutral-900 rounded-lg shadow p-6 flex flex-col min-w-[260px]">
+        <div className={`flex-1 bg-white dark:bg-neutral-900 rounded-lg shadow p-6 flex flex-col min-w-[260px] ${startAttempted && startError ? 'border-2 border-red-500' : ''}`}>
           <h2 className="text-2xl font-semibold mb-4">Equipos</h2>
+          {startAttempted && startError && (
+            <div className="mb-4 text-red-600 font-bold text-center animate-pulse">
+              {startError}
+            </div>
+          )}
           <div className="flex flex-col gap-4 mb-6">
             {teams.map((team, idx) => (
-              <div key={team.id || team.name || idx} className="flex items-start gap-3 p-3 rounded border border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800">
+              <div key={team.id || team.name || idx} className={`flex items-start gap-3 p-3 rounded border border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 ${startAttempted && startError ? 'ring-2 ring-red-300' : ''}`}>
                 <Image src={team.icon_url || '/vercel.svg'} alt="icono equipo" width={32} height={32} className="mt-1" />
                 <div>
                   <div className="font-bold text-lg">{team.name}</div>
@@ -115,10 +151,19 @@ function HostClient({ id }) {
                     <div className="text-sm text-gray-600 dark:text-gray-300">{Array.isArray(team.members) ? team.members.join(', ') : team.members}</div>
                   ) : null}
                 </div>
+                <button
+                  className="ml-auto text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded"
+                  onClick={() => handleRemoveTeam(team.id)}
+                  title="Eliminar equipo"
+                  type="button"
+                >
+                  ×
+                </button>
               </div>
             ))}
           </div>
-          <button className="mt-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded transition-colors text-lg" onClick={handleStartGame}>
+          <button className="mt-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded transition-colors text-lg" 
+            onClick={e => { handleStartGame(e) }}>
             Empezar partida
           </button>
         </div>
@@ -158,14 +203,14 @@ function HostClient({ id }) {
             <div>
               <label className="block font-medium mb-2">Categorías habilitadas</label>
               <div className="flex flex-col gap-2">
-                {Object.keys(CATEGORY_WORDS).map((key) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer">
+                {CATEGORIES.map((cat) => (
+                  <label key={cat.key} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={!!categories[key]}
-                      onChange={() => handleCategoryToggle(key)}
+                      checked={!!categories[cat.key]}
+                      onChange={() => handleCategoryToggle(cat.key)}
                     />
-                    <span>{key}</span>
+                    <span style={{ color: cat.color }}>{cat.label}</span>
                   </label>
                 ))}
               </div>

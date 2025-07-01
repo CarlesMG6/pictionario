@@ -7,10 +7,45 @@ function getRandomElement(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
+async function checkAndEndGameIfNeeded(room_id) {
+    // Obtener equipos y tablero
+    const roomSnap = await getDoc(doc(db, 'rooms', room_id));
+    const roomData = roomSnap.data();
+    const teams = Array.isArray(roomData?.teams) ? roomData.teams : [];
+    if (!teams || teams.length === 0) return false;
+    const stateSnap = await getDoc(doc(db, 'game_state', room_id));
+    const state = stateSnap.exists() ? stateSnap.data() : null;
+    if (!state) return false;
+    const teamId = state.current_turn_team;
+    const team = teams.find(t => t.id === teamId);
+    if (!team) return false;
+    const categories = roomData?.categories || ['all'];
+    const duration = roomData?.duration || 'media';
+    const BOARD_SIZES = { corta: 23, media: 39, larga: 55 };
+    const size = BOARD_SIZES[duration] || BOARD_SIZES.media;
+    let catArr = Array.isArray(categories) ? categories : Object.keys(categories);
+    if (catArr.length === 0) catArr = ['all'];
+    const boardArr = Array.from({ length: size }, (_, i) => catArr[i % catArr.length]);
+    const lastCell = boardArr.length - 1;
+    if (team.position >= lastCell) {
+        // Setear fase end y guardar ranking
+        const ranking = [...teams].sort((a, b) => (b.position || 0) - (a.position || 0));
+        await updateDoc(doc(db, 'game_state', room_id), {
+            current_phase: 'end',
+            winner_team: teamId,
+            ranking: ranking.map(t => t.id),
+        });
+        return true;
+    }
+    return false;
+}
+
 export class GameLogic {
     // SUCCESS: El equipo mantiene el turno y se le asigna una nueva palabra
     static async success(room_id) {
-        console.log(`Finalizando turno en sala ${room_id}`);
+        // Comprobar si el equipo ha llegado al final
+        const ended = await checkAndEndGameIfNeeded(room_id);
+        if (ended) return;
         // Cambiar fase a 'dice' (el equipo mantiene el turno)
         await updateDoc(doc(db, 'game_state', room_id), { current_phase: 'dice' });
         // No hay canales, rely on onSnapshot
