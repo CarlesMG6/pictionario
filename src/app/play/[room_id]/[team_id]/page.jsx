@@ -5,6 +5,8 @@ import { db } from '../../../../firebaseClient.js';
 import { GameLogic } from '../../../../utils/GameLogic';
 import Image from 'next/image';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { CATEGORY_WORDS } from '../../../../utils/CategoryWords';
+import { updateDoc } from 'firebase/firestore';
 
 export default function PlayPage({ params }) {
   // Compatibilidad futura: unwrap params si es un Promise
@@ -198,22 +200,40 @@ export default function PlayPage({ params }) {
     );
   }
 
-  // Es mi turno y fase = play: palabra+ojo+empezar ronda
+  // Es mi turno y fase = play: palabra+ojo+empezar ronda + regenerar palabra
   if (isMyTurn && gameState.current_phase === 'play') {
+    // Botón para regenerar palabra
+    const handleRegenerateWord = async () => {
+      if (!gameState.current_category) return;
+      const words = CATEGORY_WORDS[gameState.current_category] || CATEGORY_WORDS['all'] || [];
+      // Evitar la palabra actual
+      const filtered = words.filter(w => w !== gameState.current_word);
+      const newWord = filtered.length > 0 ? filtered[Math.floor(Math.random() * filtered.length)] : gameState.current_word;
+      await updateDoc(doc(db, 'game_state', room_id), { current_word: newWord });
+    };
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-8">
         <WordWithEye showWord={showWord} setShowWord={setShowWord} isProcessing={isProcessing} gameState={gameState} isMyTurn={isMyTurn} currentTeam={currentTeam} />
-        <button
-          className="mt-6 px-6 py-3 bg-green-600 text-white rounded-lg text-lg font-bold hover:bg-green-700"
-          onClick={async () => {
-            setIsProcessing(true);
-            await GameLogic.startRound(room_id, team_id);
-            setIsProcessing(false);
-          }}
-          disabled={isProcessing}
-        >
-          Empezar ronda
-        </button>
+        <div className="flex gap-4 mt-6">
+          <button
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg text-lg font-bold hover:bg-blue-700"
+            onClick={handleRegenerateWord}
+            disabled={isProcessing}
+          >
+            🔄 Regenerar palabra
+          </button>
+          <button
+            className="px-6 py-3 bg-green-600 text-white rounded-lg text-lg font-bold hover:bg-green-700"
+            onClick={async () => {
+              setIsProcessing(true);
+              await GameLogic.startRound(room_id, team_id);
+              setIsProcessing(false);
+            }}
+            disabled={isProcessing}
+          >
+            Empezar ronda
+          </button>
+        </div>
       </div>
     );
   }
