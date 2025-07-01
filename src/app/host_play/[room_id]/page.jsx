@@ -177,12 +177,11 @@ export default function HostPlayPage({ params }) {
         const value = GameLogic.rollDice();
         setDiceValue(value);
         setShowDiceModal(true);
-        console.log("[host_play] Tirada de dado automática: equipo", teamId, "valor", value);
         // Esperar a que termine la animación (ej: 2.2s) + 2s extra para mostrar el resultado
         await new Promise(res => setTimeout(res, 2200 + 3000));
-        console.log("[host_play] Animación de dado terminada, actualizando estado del juego...");
         setShowDiceModal(false);
 
+        await new Promise(res => setTimeout(res, 1000));
         // 3. Actualizar posición del equipo
         let newPosition = GameLogic.calculateTeamPosition(
           teamsArray[teamIndex].position,
