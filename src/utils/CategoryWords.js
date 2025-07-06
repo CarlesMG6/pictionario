@@ -347,13 +347,28 @@ export const CATEGORY_WORDS = {
         "Los Cuatro Fantásticos", "Los Cuatro Fantásticos y Silver Surfer", "El Increíble Hulk", "Hulk", "Blurred"
     ],
     famous: [
-        // 500 nombres de personajes famosos reconocibles para jugadores en España
-        "Lionel Messi", "Cristiano Ronaldo", "Penélope Cruz", "Antonio Banderas", "Rafael Nadal", "Rosalía", "Enrique Iglesias", "Shakira", "Pablo Picasso", "Salvador Dalí", "Miguel de Cervantes", "Federico García Lorca", "Miguel de Unamuno", "Isabel Allende", "Gabriel García Márquez", "Mario Vargas Llosa", "Julio Iglesias", "Plácido Domingo", "Montserrat Caballé", "Joan Manuel Serrat", /* ...hasta 500*/
+        "Elon Musk", "Barack Obama", "Lionel Messi", "Cristiano Ronaldo", "Oprah Winfrey", "Taylor Swift", "Beyoncé", "Shakira", "Michael Jackson", "Madonna",
+        "Bill Gates", "Jeff Bezos", "Mark Zuckerberg", "Steve Jobs", "Warren Buffett", "Rihanna", "Lady Gaga", "Adele", "Ed Sheeran", "Drake",
+        "LeBron James", "Serena Williams", "Roger Federer", "Usain Bolt", "Simone Biles", "Tom Brady", "Tiger Woods", "Michael Jordan", "Diego Maradona", "Pelé",
+        "Rafael Nadal", "Novak Djokovic", "Lewis Hamilton", "Valentino Rossi", "Fernando Alonso", "Roger Waters", "Paul McCartney", "John Lennon", "Freddie Mercury", "David Bowie",
+        "Brad Pitt", "Angelina Jolie", "Leonardo DiCaprio", "Tom Cruise", "Will Smith", "Dwayne Johnson", "Scarlett Johansson", "Jennifer Lopez", "Robert Downey Jr.", "Johnny Depp",
+        "Emma Watson", "Daniel Radcliffe", "Morgan Freeman", "Meryl Streep", "Julia Roberts", "George Clooney", "Keanu Reeves", "Jackie Chan", "Bruce Lee", "Arnold Schwarzenegger",
+        "Pablo Picasso", "Salvador Dalí", "Frida Kahlo", "Vincent van Gogh", "Leonardo da Vinci", "Albert Einstein", "Isaac Newton", "Stephen Hawking", "Marie Curie", "Malala Yousafzai",
+        "Nelson Mandela", "Mahatma Gandhi", "Martin Luther King", "Angela Merkel", "Vladimir Putin", "Xi Jinping", "Emmanuel Macron", "Donald Trump", "Joe Biden", "Kim Jong-un",
+        "Greta Thunberg", "Papa Francisco", "Dalai Lama", "Reina Isabel II", "Principe William", "Principe Harry", "Cristina Fernández", "Shinzo Abe", "Narendra Modi", "Recep Tayyip Erdogan",
+        "Ronaldo Nazário", "Zinedine Zidane", "Andrés Iniesta", "Kylian Mbappé", "Neymar Jr.", "Luis Suárez", "Karim Benzema", "Megan Rapinoe", "Marta Vieira da Silva", "Yoko Ono"
     ],
     insect: [
-        // 500 nombres de insectos y arácnidos comunes y exóticos
-        "Hormiga", "Abeja", "Mariposa", "Saltamontes", "Libélula", "Cochinilla", "Escarabajo", "Mosca", "Mosquito", "Avispa", "Grillo", "Polilla", "Araña", "Chinche", "Ciempiés", /* ...hasta 500*/
-    ],
+        "Hormiga","Abeja","Avispa","Mosquito","Mosca","Libélula","Mariposa","Polilla","Escarabajo","Mariquita","Cigarra","Saltamontes","Grillo","Cucaracha","Chinche","Pulga","Piojo",
+        "Tábano","Termita","Mantis religiosa","Mosca de la fruta","Escorpión","Tijereta","Gorgojo","Carcoma","Crisopa","Alacrán cebollero","Zancudo","Mosca tse-tsé","Tricóptero",
+        "Lepisma","Barrenador","Cochinilla","Ortóptero","Efímera","Caddisfly","Insecto palo","Insecto hoja","Cigarrilla","Tórsalo","Jejen","Avispón","Bicho bola","Bicho de la humedad",
+        "Tarántula roja","Escarabajo rinoceronte","Luciérnaga","Ciempiés","Milpiés","Bicho canasto","Insecto escudo","Barrenador del café","Garrapata","Trips","Bicho del trigo",
+        "Bicho de la col","Escarabajo del pepino","Pulgón","Langosta del desierto","Mosquito tigre","Cucaracha americana","Panalero","Bicho del arroz","Hormiga león","Cigarra común",
+        "Langosta migratoria","Bicho palo malayo","Insecto del jabón","Chinche apestosa","Insecto acuático","Ciempiés doméstico","Bicho camello","Mosca verde","Mosca azul",
+        "Tábano de los caballos","Escarabajo pelotero","Escarabajo ciervo","Escarabajo dorado","Escarabajo de alfombra","Tijereta común","Gorgojo del maíz","Gorgojo del arroz",
+        "Hormiga roja","Hormiga negra","Mosca de la carne","Mosca del vinagre","Piojo del cuerpo","Piojo de la cabeza","Mariposa monarca","Polilla gitana","Tarántula tigre",
+        "Mantis orquídea","Mantis hoja","Luciérnaga común","Escarabajo bombardero","Escarabajo de la patata","Mariposa búho","Cigarra negra","Langosta verde","Abejorro común","Cochinilla del maíz"
+] ,
     food: [
         "Pan", "Arroz", "Pasta", "Patata", "Tomate", "Lechuga", "Zanahoria", "Pimiento",
         "Cebolla", "Ajo", "Aceite de oliva", "Mantequilla", "Queso", "Leche", "Yogur",
