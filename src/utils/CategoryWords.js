@@ -1,26 +1,27 @@
 // src/utils/CategoryWords.js
 
 export const CATEGORIES = [
-  { key: 'all', label: 'Todos juegan', color: '#fbbf24' },
-  { key: 'person', label: 'Persona, animal o lugar', color: '#f87171' },
-  { key: 'object', label: 'Objeto', color: '#60a5fa' },
-  { key: 'action', label: 'Acción', color: '#34d399' },
-  { key: 'difficulty', label: 'Dificultad', color: '#f472b6' },
-  { key: 'movies', label: 'Películas o series', color: '#a78bfa' },
-  { key: 'famous', label: 'Famosos', color: '#f59e42' },
-  { key: 'insect', label: 'Insectos', color: '#a3e635' },
-  { key: 'food', label: 'Comida y bebida', color: '#facc15' },
-  { key: 'animal', label: 'Animales', color: '#38bdf8' },
-  { key: 'occupation', label: 'Profesión', color: '#fbbf24' },
-  { key: 'musicalInstrument', label: 'Instrumentos musicales', color: '#818cf8' },
-  { key: 'song', label: 'Canciones', color: '#f472b6' },
-  { key: 'game', label: 'Juegos', color: '#34d399' },
-  { key: 'country', label: 'Países', color: '#60a5fa' },
-  { key: 'app', label: 'Apps o sitios web', color: '#f87171' },
-  { key: 'brand', label: 'Marcas', color: '#fbbf24' },
-  { key: 'heroe', label: 'Superhéroes', color: '#a78bfa' },
-  { key: 'place', label: 'Lugares', color: '#38bdf8' },
+  { key: 'all', label: 'Todos juegan', color: '#fbbf24' }, // Amarillo
+  { key: 'person', label: 'Persona, animal o lugar', color: '#ef4444' }, // Rojo
+  { key: 'object', label: 'Objeto', color: '#3b82f6' }, // Azul
+  { key: 'action', label: 'Acción', color: '#10b981' }, // Verde esmeralda
+  { key: 'difficulty', label: 'Dificultad', color: '#ec4899' }, // Rosa fuerte
+  { key: 'movies', label: 'Películas o series', color: '#8b5cf6' }, // Violeta
+  { key: 'famous', label: 'Famosos', color: '#fb923c' }, // Naranja
+  { key: 'insect', label: 'Insectos', color: '#84cc16' }, // Lima
+  { key: 'food', label: 'Comida y bebida', color: '#eab308' }, // Amarillo dorado
+  { key: 'animal', label: 'Animales', color: '#0ea5e9' }, // Celeste
+  { key: 'occupation', label: 'Profesión', color: '#6366f1' }, // Azul índigo
+  { key: 'musicalInstrument', label: 'Instrumentos musicales', color: '#14b8a6' }, // Verde agua
+  { key: 'song', label: 'Canciones', color: '#db2777' }, // Rosa oscuro
+  { key: 'game', label: 'Juegos', color: '#22c55e' }, // Verde brillante
+  { key: 'country', label: 'Países', color: '#2563eb' }, // Azul real
+  { key: 'app', label: 'Apps o sitios web', color: '#f43f5e' }, // Rosa rojo
+  { key: 'brand', label: 'Marcas', color: '#d97706' }, // Naranja oscuro
+  { key: 'heroe', label: 'Superhéroes', color: '#7c3aed' }, // Púrpura fuerte
+  { key: 'place', label: 'Lugares', color: '#06b6d4' }, // Turquesa
 ];
+
 
 export const CATEGORY_COLORS = Object.fromEntries(CATEGORIES.map(cat => [cat.key, cat.color]));
 
