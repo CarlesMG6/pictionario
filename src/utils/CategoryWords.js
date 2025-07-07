@@ -1,25 +1,29 @@
 // src/utils/CategoryWords.js
 
+
+// Importación de iconos para categorías
+import { FaPeopleArrows, FaUser, FaCube, FaRunning, FaStar, FaFilm, FaCrown, FaBug, FaUtensils, FaDog, FaBriefcase, FaGuitar, FaMusic, FaGamepad, FaGlobe, FaMobileAlt, FaAppleAlt, FaSuperpowers, FaMapMarkerAlt } from 'react-icons/fa';
+
 export const CATEGORIES = [
-  { key: 'all', label: 'Todos juegan', color: '#fbbf24' }, // Amarillo
-  { key: 'person', label: 'Persona, animal o lugar', color: '#ef4444' }, // Rojo
-  { key: 'object', label: 'Objeto', color: '#3b82f6' }, // Azul
-  { key: 'action', label: 'Acción', color: '#10b981' }, // Verde esmeralda
-  { key: 'difficulty', label: 'Dificultad', color: '#ec4899' }, // Rosa fuerte
-  { key: 'movies', label: 'Películas o series', color: '#8b5cf6' }, // Violeta
-  { key: 'famous', label: 'Famosos', color: '#fb923c' }, // Naranja
-  { key: 'insect', label: 'Insectos', color: '#84cc16' }, // Lima
-  { key: 'food', label: 'Comida y bebida', color: '#eab308' }, // Amarillo dorado
-  { key: 'animal', label: 'Animales', color: '#0ea5e9' }, // Celeste
-  { key: 'occupation', label: 'Profesión', color: '#6366f1' }, // Azul índigo
-  { key: 'musicalInstrument', label: 'Instrumentos musicales', color: '#14b8a6' }, // Verde agua
-  { key: 'song', label: 'Canciones', color: '#db2777' }, // Rosa oscuro
-  { key: 'game', label: 'Juegos', color: '#22c55e' }, // Verde brillante
-  { key: 'country', label: 'Países', color: '#2563eb' }, // Azul real
-  { key: 'app', label: 'Apps o sitios web', color: '#f43f5e' }, // Rosa rojo
-  { key: 'brand', label: 'Marcas', color: '#d97706' }, // Naranja oscuro
-  { key: 'heroe', label: 'Superhéroes', color: '#7c3aed' }, // Púrpura fuerte
-  { key: 'place', label: 'Lugares', color: '#06b6d4' }, // Turquesa
+  { key: 'all', label: 'Todos juegan', color: '#fbbf24', icon: FaPeopleArrows  },
+  { key: 'person', label: 'Persona, animal o lugar', color: '#ef4444', icon: FaUser },
+  { key: 'object', label: 'Objeto', color: '#3b82f6', icon: FaCube },
+  { key: 'action', label: 'Acción', color: '#10b981', icon: FaRunning },
+  { key: 'difficulty', label: 'Dificultad', color: '#ec4899', icon: FaStar },
+  { key: 'movies', label: 'Películas o series', color: '#8b5cf6', icon: FaFilm },
+  { key: 'famous', label: 'Famosos', color: '#fb923c', icon: FaCrown },
+  { key: 'insect', label: 'Insectos', color: '#84cc16', icon: FaBug },
+  { key: 'food', label: 'Comida y bebida', color: '#eab308', icon: FaUtensils },
+  { key: 'animal', label: 'Animales', color: '#0ea5e9', icon: FaDog },
+  { key: 'occupation', label: 'Profesión', color: '#6366f1', icon: FaBriefcase },
+  { key: 'musicalInstrument', label: 'Instrumentos musicales', color: '#14b8a6', icon: FaGuitar },
+  { key: 'song', label: 'Canciones', color: '#db2777', icon: FaMusic },
+  { key: 'game', label: 'Juegos', color: '#22c55e', icon: FaGamepad },
+  { key: 'country', label: 'Países', color: '#2563eb', icon: FaGlobe },
+  { key: 'app', label: 'Apps o sitios web', color: '#f43f5e', icon: FaMobileAlt },
+  { key: 'brand', label: 'Marcas', color: '#d97706', icon: FaAppleAlt },
+  { key: 'heroe', label: 'Superhéroes', color: '#7c3aed', icon: FaSuperpowers },
+  { key: 'place', label: 'Lugares', color: '#06b6d4', icon: FaMapMarkerAlt },
 ];
 
 

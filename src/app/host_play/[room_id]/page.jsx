@@ -8,6 +8,20 @@ import { CATEGORY_WORDS, CATEGORIES, CATEGORY_COLORS } from '../../../utils/Cate
 import { GameLogic } from "../../../utils/GameLogic";
 import Dice3D from "../../../components/Dice3D";
 import "../../../components/Dice3D.css";
+import { useRouter } from 'next/navigation';
+
+import { IoQrCode } from "react-icons/io5";
+// QR code generation (simple, no external dependency)
+function QRCode({ url, size = 128 }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!url || !ref.current) return;
+    import('qrcode').then(QR => {
+      QR.toCanvas(ref.current, url, { width: size, margin: 1, color: { dark: '#000', light: '#fff' } });
+    });
+  }, [url, size]);
+  return <canvas ref={ref} width={size} height={size} style={{ background: '#fff', borderRadius: 4, boxShadow: '0 2px 8px #0001' }} />;
+}
 
 const BOARD_SIZES = {
   corta: 23,
@@ -44,6 +58,17 @@ export default function HostPlayPage({ params }) {
   const beepTimes = [5];
   const [lastBeep, setLastBeep] = useState(null);
 
+    // --- MODAL QR ---
+  const [showQrModal, setShowQrModal] = useState(false);
+
+
+    // Set playing=false when game ends
+  useEffect(() => {
+    if (gameState?.current_phase === 'end' && room_id) {
+      updateDoc(doc(db, 'rooms', room_id), { playing: false });
+    }
+  }, [gameState?.current_phase, room_id]);
+  
   // Efecto: avisos sonoros en el temporizador
   useEffect(() => {
     if (gameState?.current_phase === 'timer_running' && timer !== null && beepTimes.includes(timer) && timer !== lastBeep) {
@@ -92,49 +117,6 @@ export default function HostPlayPage({ params }) {
       setTimerRunning(false);
     }
   }, [gameState?.current_phase]);
-
-  // Cargar datos
-  const fetchData = async () => {
-    // Obtener datos de game_state
-    const { data: state } = await db
-      .from("game_state")
-      .select("*")
-      .eq("room_id", room_id)
-      .single();
-    setGameState(state);
-    // Obtener datos de teams
-    const { data: teamList } = await db
-      .from("teams")
-      .select("*")
-      .eq("room_id", room_id)
-      .order("position");
-    setTeams(teamList || []);
-    // Obtener duración y categorías desde rooms
-    const { data: roomData } = await db
-      .from("rooms")
-      .select("duration, categories")
-      .eq("id", room_id)
-      .single();
-    if (roomData && roomData.categories && roomData.duration) {
-      const categories = roomData.categories;
-      const size = BOARD_SIZES[roomData.duration] || BOARD_SIZES.media;
-      // Rellenar tablero alternando categorías
-      console.log("[host_play] Cargando tablero con categorías:", categories, "y tamaño:", size);
-      let catArr = Array.isArray(categories) ? categories : Object.keys(categories);
-      console.log("[host_play] Categorías obtenidas:", catArr);
-      if (catArr.length === 0) catArr = ["all"];
-      const boardArr = Array.from({ length: size }, (_, i) => catArr[i % catArr.length]);
-      console.log("[host_play] Tablero generado:", boardArr);
-      setBoard(boardArr);
-      boardRef.current = boardArr; // <-- mantener referencia actualizada
-    }
-    // Categoría actual
-    if (state && state.current_category) {
-      setCategoryLabel(state.current_category);
-    } else {
-      setCategoryLabel("");
-    }
-  };
 
   async function getTeamsArray(room_id) {
     const roomSnap = await getDoc(doc(db, 'rooms', room_id));
@@ -316,96 +298,75 @@ export default function HostPlayPage({ params }) {
       { x: cellSize - pieceSize, y: cellSize - pieceSize }, // bottom-right
     ];
     return (
-      <div
-        className="relative bg-white rounded-lg"
-        style={{
-          width: `${cols * cellSize + boardPadding * 2}px`,
-          height: `${(maxY + 1) * cellSize + boardPadding * 2}px`,
-          margin: 'auto',
-        }}
-      >
-        {/* Casillas */}
-        {board.map((cat, i) => {
-          const { x, y } = getSBoardPosition(i, cols, rowsPerZigzag);
-          return (
-            <div
-              key={i}
-              className="absolute w-16 h-16 rounded flex items-center justify-center text-base font-bold border shadow"
-              style={{
-                left: `${x * cellSize}px`,
-                top: `${y * cellSize}px`,
-                width: `${cellSize}px`,
-                height: `${cellSize}px`,
-                background: CATEGORY_COLORS[cat] || "#eee",
-                borderColor: "#fff",
-                zIndex: 1,
-              }}
-            >
-              {i + 1}
-            </div>
-          );
-        })}
-        {/* Piezas de equipos */}
-        {Object.entries(teamsByCell).map(([posStr, teamsInCell]) => {
-          const pos = getSBoardPosition(Number(posStr), cols, rowsPerZigzag);
-          return teamsInCell.map((team, idx) => {
-            // Si hay más de 4 equipos, se superponen en la esquina superior izquierda
-            const offset = pieceOffsets[idx] || pieceOffsets[0];
+      <div className="flex flex-col items-center gap-4 bg-card p-8 rounded-2xl">
+        <div
+          className="relative rounded-lg"
+          style={{
+            width: `${cols * cellSize}px`,
+            height: `${(maxY + 1) * cellSize}px`,
+            margin: 'auto',
+          }}
+        >
+          {/* Casillas */}
+          {board.map((cat, i) => {
+            const { x, y } = getSBoardPosition(i, cols, rowsPerZigzag);
             return (
               <div
-                key={team.id}
-                className="absolute team-piece-anim"
+                key={i}
+                className="absolute w-16 h-16 rounded flex items-center justify-center text-base font-bold border shadow"
                 style={{
-                  left: `${pos.x * cellSize + offset.x + (cellSize - pieceSize) / 2 * (pieceOffsets[idx] ? 0 : 1)}px`,
-                  top: `${pos.y * cellSize + offset.y + (cellSize - pieceSize) / 2 * (pieceOffsets[idx] ? 0 : 1)}px`,
-                  zIndex: 2,
-                  transition: 'left 0.7s cubic-bezier(.4,1.6,.4,1), top 0.7s cubic-bezier(.4,1.6,.4,1)',
+                  left: `${x * cellSize}px`,
+                  top: `${y * cellSize}px`,
+                  width: `${cellSize-2}px`,
+                  height: `${cellSize-2}px`,
+                  background: CATEGORY_COLORS[cat] || "#eee",
+                  borderColor:  CATEGORY_COLORS[cat] || "#eee",
+                  strokeWidth: 0,
+                  zIndex: 1,
                 }}
               >
-                <Image
-                  src={team.icon_url || "/vercel.svg"}
-                  alt="icono"
-                  width={pieceSize}
-                  height={pieceSize}
-                  className="rounded-full border-2 border-black bg-white"
-                />
+                {i + 1}
               </div>
             );
-          });
-        })}
+          })}
+          {/* Piezas de equipos */}
+          {Object.entries(teamsByCell).map(([posStr, teamsInCell]) => {
+            const pos = getSBoardPosition(Number(posStr), cols, rowsPerZigzag);
+            return teamsInCell.map((team, idx) => {
+              let offset = { x: 0, y: 0 };
+              if (teamsInCell.length === 1) {
+                // Centrar la única pieza
+                offset = { x: (cellSize - pieceSize) / 2, y: (cellSize - pieceSize) / 2 };
+              } else {
+                // Repartir en esquinas
+                offset = pieceOffsets[idx] || pieceOffsets[0];
+              }
+              return (
+                <div
+                  key={team.id}
+                  className="absolute team-piece-anim"
+                  style={{
+                    left: `${pos.x * cellSize + offset.x}px`,
+                    top: `${pos.y * cellSize + offset.y}px`,
+                    zIndex: 2,
+                    transition: 'left 0.7s cubic-bezier(.4,1.6,.4,1), top 0.7s cubic-bezier(.4,1.6,.4,1)',
+                  }}
+                >
+                  <Image
+                    src={team.icon_url || "/vercel.svg"}
+                    alt="icono"
+                    width={pieceSize}
+                    height={pieceSize}
+                    className="shadow-xl"
+                  />
+                </div>
+              );
+            });
+          })}
+        </div>
       </div>
     );
   };
-
-  // Render equipos
-  const renderTeams = () => (
-    <div className="flex flex-col gap-4">
-      {teams.map((team) => (
-        <div
-          key={team.id}
-          className={`flex items-center gap-2 p-2 rounded ${gameState?.current_turn_team === team.id ? "bg-blue-100 border-l-4 border-blue-500" : ""
-            }`}
-        >
-          <Image
-            src={team.icon_url || "/vercel.svg"}
-            alt="icono"
-            width={28}
-            height={28}
-            className="rounded-full"
-          />
-          <span className="font-bold">{team.name}</span>
-          {team.members && (
-            <span className="text-xs text-gray-500 ml-2">
-              {Array.isArray(team.members) ? team.members.join(", ") : team.members}
-            </span>
-          )}
-          {gameState?.current_turn_team === team.id && (
-            <span className="ml-2 text-blue-600 font-bold">(Turno)</span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
 
   const [countdown, setCountdown] = useState(3);
   const countdownRef = useRef();
@@ -470,10 +431,10 @@ export default function HostPlayPage({ params }) {
     return (
       <svg width="160" height="160">
         {/* Fondo gris 75% */}
-        <path d={bgArc} stroke="#e5e7eb" strokeWidth="14" fill="none" strokeLinecap="round" />
+        <path d={bgArc} className="stroke-14 stroke-secondary" fill="none" strokeLinecap="round" />
         {/* Progreso */}
         {percent > 0 && (
-          <path d={progArc} stroke="#ef4444" strokeWidth="14" fill="none" strokeLinecap="round" />
+          <path d={progArc} className="stroke-10 stroke-primary" fill="none" strokeLinecap="round" />
         )}
       </svg>
     );
@@ -487,6 +448,8 @@ export default function HostPlayPage({ params }) {
     : [];
   const medals = ['🥇', '🥈', '🥉'];
 
+  const router = useRouter();
+
   // Mostrar modal mientras la fase sea timer_starts, timer_running o timer_stopped
   const showTimerModal = ["timer_starts", "timer_running", "timer_stopped"].includes(gameState?.current_phase);
 
@@ -495,49 +458,36 @@ export default function HostPlayPage({ params }) {
       <header className="py-6 text-center">
         <h1 className="text-7xl font-bold tracking-tighter font-sans" style={{ fontFamily: 'Inter, Arial, sans-serif', letterSpacing: '-0.05em' }}>Pictionario</h1>
       </header>
-      <main className="flex flex-1 flex-row w-11/12 mx-auto gap-2 p-2">
+      <main className="flex flex-1 flex-row w-11/12 mx-auto gap-2 p-2 items-center">
         {/* Columna izquierda: Categoría actual + Equipos */}
         <aside className="w-[320px] min-w-[220px] flex flex-col items-stretch gap-8">
-          <div className="bg-white rounded-lg shadow p-6 text-center mb-2">
+          <div className="bg-card rounded-lg shadow p-6 text-center mb-2">
             {gameState?.all_play && (
-              <div className="text-lg text-green-600 font-bold mb-1">¡Todos juegan!</div>
+              <div className="text-lg text-accent font-bold mb-1">¡Todos juegan!</div>
             )}
-            <div className="text-lg text-gray-500 mb-2">Categoría actual</div>
+            <div className="text-lg text-muted-foreground mb-2">Categoría actual</div>
             <div className="text-2xl font-bold mb-2" style={{ color: CATEGORY_COLORS[gameState?.current_category] }}>
               {CATEGORIES.find(cat => cat.key === gameState?.current_category)?.label || '-'}
             </div>
           </div>
-          {/* Listado vertical de categorías habilitadas debajo del recuadro de categoría actual */}
-          {roomConfig?.categories && Array.isArray(roomConfig.categories) && (
-            <div className="flex flex-col gap-2 mt-4">
-              <div className="text-base font-bold text-gray-700 mb-1">Categorías</div>
-              {CATEGORIES.filter(cat => roomConfig.categories.includes(cat.key)).map(cat => (
-                <div key={cat.key} className="flex items-center px-3 py-2 rounded-lg shadow text-base font-semibold" style={{ background: cat.color || '#eee', color: '#222' }}>
-                  {cat.label}
-                </div>
-              ))}
-            </div>
-          )}
           <div className="flex flex-col">
-            <h2 className="text-2xl font-semibold mb-4">Equipos</h2>
+            <h2 className="text-lg font-bold text-muted-foreground mb-4">Equipos</h2>
             <div className="flex flex-col gap-4">
               {teams.map((team) => (
                 <div
                   key={team.id}
-                  className="flex items-start gap-3 p-3 rounded border border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 relative"
-                  style={{ borderLeft: gameState?.current_turn_team === team.id ? '8px solid #2563eb' : '8px solid transparent' }}
+                  className={`flex flex-row items-center gap-3 px-4 py-2 rounded border bg-card border-border relative ${gameState?.current_turn_team === team.id ? 'ring-2 ring-primary' : ''}`}
                 >
                   <Image
                     src={team.icon_url || "/vercel.svg"}
                     alt="icono"
                     width={32}
                     height={32}
-                    className="mt-1 rounded-full"
                   />
                   <div>
-                    <div className="font-bold text-lg">{team.name}</div>
+                    <div className="font-bold text-lg text-primary">{team.name}</div>
                     {team.members && (
-                      <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                      <div className="text-sm text-muted-foreground mt-1">
                         {Array.isArray(team.members) ? team.members.join(', ') : team.members}
                       </div>
                     )}
@@ -548,9 +498,9 @@ export default function HostPlayPage({ params }) {
           </div>
         </aside>
         {/* Columna central: Tablero */}
-        <section className="flex-1 flex flex-col items-center justify-center">
+        <section className="flex-1 flex flex-col">
           {board.length === 0 ? <div>Cargando tablero...</div> :
-            <div className="flex items-center justify-center w-full h-full">
+            <div className="flex items-center justify-center w-full">
               {renderBoard()}
             </div>
           }
@@ -559,23 +509,37 @@ export default function HostPlayPage({ params }) {
             <div className="mt-6 text-3xl font-bold animate-bounce">🎲 {diceRolling.value}</div>
           )}
         </section>
+        {/* Columna derecha: Listado de categorías */}
+        <aside className="w-[260px] min-w-[180px] flex flex-col items-stretch gap-8">
+          {roomConfig?.categories && Array.isArray(roomConfig.categories) && (
+            <div className="flex flex-col gap-2 mt-4">
+              <div className="text-lg font-bold text-muted-foreground mb-1">Categorías</div>
+              {CATEGORIES.filter(cat => roomConfig.categories.includes(cat.key)).map(cat => (
+                <div key={cat.key} className="flex items-center px-3 py-2 rounded-lg shadow text-base font-semibold" style={{ background: cat.color || 'var(--card)', color: '#222' }}>
+                  {cat.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </aside>
+
       </main>
       {/* MODAL TEMPORIZADOR */}
       {showTimerModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[320px] min-h-[320px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20">
+          <div className="bg-card rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[320px] min-h-[320px]">
             {gameState?.current_phase === 'timer_starts' && countdown > 0 ? (
               <div className="flex flex-col items-center justify-center">
-                <div className="text-7xl font-extrabold text-blue-700 mb-2">{countdown > 0 ? countdown : '¡YA!'}</div>
-                <div className="text-lg text-gray-700">Preparados para la ronda...</div>
+                <div className="text-7xl font-extrabold text-primary mb-2">{countdown > 0 ? countdown : '¡YA!'}</div>
+                <div className="text-lg text-muted-foreground">Preparados para la ronda...</div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center">
                 <div className="relative flex items-center justify-center">
                   <CircularProgress value={timer} max={typeof roomConfig?.round_time === 'number' ? roomConfig.round_time : 45} />
-                  <span className="absolute text-4xl text-red-600">{formatTimer(timer || 0)}</span>
+                  <span className="absolute text-4xl text-primary">{formatTimer(timer || 0)}</span>
                 </div>
-                <div className="text-lg text-gray-700 mt-4">
+                <div className="text-lg text-muted-foreground mt-4 shadow-2xl">
                   {gameState?.current_phase === 'timer_stopped' ? '¡Se acabó!' : '¡Tiempo en marcha!'}
                 </div>
               </div>
@@ -585,8 +549,8 @@ export default function HostPlayPage({ params }) {
       )}
       {/* MODAL ANIMACIÓN DADO */}
       {showDiceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-green-700 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[320px] min-h-[320px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20">
+          <div className="bg-success rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[320px] min-h-[320px]">
             <Dice3D value={diceValue} animate />
             <div className="mt-4 text-2xl font-bold">¡Tirando el dado!</div>
           </div>
@@ -594,53 +558,95 @@ export default function HostPlayPage({ params }) {
       )}
       {/* MODAL FIN DE PARTIDA */}
       {showEndModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[340px] min-h-[340px]">
-            <div className="text-4xl font-extrabold text-green-700 mb-4">¡Enhorabuena!</div>
-            <div className="text-xl font-bold mb-6">El equipo ganador es:</div>
-            <div className="flex items-center gap-3 mb-8">
-              <Image src={teams.find(t => t.id === gameState.winner_team)?.icon_url || '/vercel.svg'} alt="icono ganador" width={48} height={48} className="rounded-full border-2 border-yellow-400" />
-              <span className="text-2xl font-bold text-yellow-600">{teams.find(t => t.id === gameState.winner_team)?.name}</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20">
+          <div className="bg-card rounded-2xl shadow-2xl p-16 flex flex-col items-center relative min-w-[340px] min-h-[340px]">
+            <div className="text-4xl font-extrabold text-success mb-4">¡Enhorabuena!</div>
+            <div className="text-xl font-bold mb-6 text-foreground">El equipo ganador es:</div>
+            <div className="flex flex-col items-center gap-3 mb-8 relative">
+                <Image src={teams.find(t => t.id === gameState.winner_team)?.icon_url || '/vercel.svg'} alt="icono ganador" width={64} height={64} />
+              <span className="text-2xl font-bold text-accent">{teams.find(t => t.id === gameState.winner_team)?.name}</span>
             </div>
             <div className="w-full max-w-xs mx-auto">
-              <div className="text-lg font-semibold mb-2 text-center">Clasificación final</div>
-              <div className="flex flex-col gap-2">
+              <div className="text-lg font-semibold mb-2 text-muted-foreground">Clasificación final</div>
+              <div className="flex flex-col gap-2 mb-8">
                 {rankingTeams.map((team, idx) => (
-                  <div key={team.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-100">
+                  <div key={team.id} className="flex items-center gap-4 p-2 rounded-lg bg-muted">
                     <span className="text-2xl">{medals[idx] || ''}</span>
-                    <Image src={team.icon_url || '/vercel.svg'} alt="icono" width={32} height={32} className="rounded-full" />
-                    <span className="font-bold text-lg">{team.name}</span>
-                    <span className="ml-auto text-gray-500">#{idx + 1}</span>
+                    <Image src={team.icon_url || '/vercel.svg'} alt="icono" width={32} height={32} />
+                    <span className="font-bold text-lg text-foreground">{team.name}</span>
+                    <span className="ml-auto text-muted-foreground">#{idx + 1}</span>
                   </div>
                 ))}
               </div>
+              <div className="flex flex-row gap-4 mt-4 w-full justify-center">
+                <button
+                  className="bg-muted hover:bg-muted-hover text-foreground font-semibold py-2 px-4 rounded transition-colors text-base"
+                  type="button"
+                  onClick={() => alert('Estadísticas próximamente')}
+                >
+                  Estadísticas de la partida
+                </button>
+                <button
+                  className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold py-2 px-4 rounded transition-colors text-base"
+                  type="button"
+                  onClick={async () => {
+                    // Recupera el code de la sala y redirige usando el code, no el id interno
+                    const roomSnap = await getDoc(doc(db, 'rooms', room_id));
+                    const roomData = roomSnap.data();
+                    if (roomData?.code) {
+                      router.push(`/host/${roomData.code}`);
+                    } else {
+                      alert('No se pudo recuperar el código de la sala.');
+                    }
+                  }}
+                >
+                  Nueva Partida
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* FOOTER QR/NORMAS */}
+      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center py-6">
+        <button
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4 text-base"
+          onClick={() => window.open('/rules', '_blank')}
+          type="button"
+        >
+          <Image aria-hidden src="/file.svg" alt="File icon" width={16} height={16} />
+          Normas del juego
+        </button>
+        <button
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4 text-base"
+          onClick={() => setShowQrModal(true)}
+          type="button"
+        >
+          <Image aria-hidden src="/window.svg" alt="QR icon" width={16} height={16} />
+          Unirse a la partida
+        </button>
+      </footer>
+
+      {/* MODAL QR INVITACIÓN */}
+      {showQrModal && roomConfig?.code && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20">
+          <div className="bg-card rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[320px] min-h-[320px]">
+            <button
+              className="absolute top-4 right-4 text-2xl text-muted-foreground hover:text-primary"
+              onClick={() => setShowQrModal(false)}
+              aria-label="Cerrar"
+              type="button"
+            >
+              ×
+            </button>
+            <div className="text-2xl font-bold mb-6 text-center">Únete a la partida</div>
+            <div className="mb-2 text-center text-muted-foreground">Entra en <span className="font-semibold">pictionario.vercel.app</span> e introduce este código:</div>
+            <div className="text-5xl font-extrabold text-primary mb-6 text-center tracking-widest">{roomConfig.code}</div>
+            <div className="mb-2 text-center text-muted-foreground">O escanea este QR:</div>
+            <QRCode url={`https://pictionario.vercel.app/join/${roomConfig.code}`} size={160} />
           </div>
         </div>
       )}
     </div>
   );
 }
-
-
-// Lógica para acertar (esto debe llamarse cuando el host pulse "acertado")
-async function checkAndEndGameIfNeeded({ teams, board, teamId, db, room_id }) {
-  // Obtener la posición del equipo actual
-  const team = teams.find(t => t.id === teamId);
-  if (!team) return false;
-  const lastCell = board.length - 1;
-  if (team.position >= lastCell) {
-    // Setear fase end y guardar ranking
-    // Ordenar equipos por posición descendente
-    const ranking = [...teams].sort((a, b) => (b.position || 0) - (a.position || 0));
-    await updateDoc(doc(db, 'game_state', room_id), {
-      current_phase: 'end',
-      winner_team: teamId,
-      ranking: ranking.map(t => t.id),
-    });
-    return true;
-  }
-  return false;
-}
-
-export { checkAndEndGameIfNeeded };

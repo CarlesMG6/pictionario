@@ -74,8 +74,8 @@ export default function PlayPage({ params }) {
   // Lógica de UI según current_phase
   if (gameState.current_phase === 'waiting') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-6xl font-extrabold text-blue-700">Pictionario</h1>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
+        <h1 className="text-6xl font-extrabold text-primary">Pictionario</h1>
       </div>
     );
   }
@@ -300,13 +300,13 @@ function WordWithEye({ showWord, setShowWord, isProcessing, gameState, isMyTurn,
             : 'Es turno de otro equipo'}
       </div>
       <div className="flex flex-row gap-8 items-center">
-        <div className="border rounded-lg p-8 bg-white shadow text-2xl min-w-[220px] min-h-[80px] flex items-center justify-center">
+        <div className="border border-border rounded-lg p-8 bg-card shadow text-2xl min-w-[220px] min-h-[80px] flex items-center justify-center">
           {showWord
-            ? (gameState.current_word ? <span className="text-gray-800">{gameState.current_word}</span> : <span className="italic text-gray-800">(Sin palabra)</span>)
-            : <span className="italic text-gray-500">Palabra oculta</span>}
+            ? (gameState.current_word ? <span className="text-foreground">{gameState.current_word}</span> : <span className="italic text-muted-foreground">(Sin palabra)</span>)
+            : <span className="italic text-muted-foreground">Palabra oculta</span>}
         </div>
         <button
-          className="ml-4 p-2 bg-blue-100 rounded-full border hover:bg-blue-200"
+          className="ml-4 p-2 bg-primary/10 rounded-full border border-border hover:bg-primary/20"
           onClick={() => setShowWord((v) => !v)}
           aria-label={showWord ? 'Ocultar palabra' : 'Mostrar palabra'}
           disabled={isProcessing}

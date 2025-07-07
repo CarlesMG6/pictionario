@@ -57,16 +57,16 @@ export default function Home() {
   };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)] bg-background text-foreground">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
 
-        <div className="text-7xl font-bold tracking-tighter font-sans" style={{ fontFamily: 'Inter, Arial, sans-serif' }}>
+        <div className="text-7xl text-primary font-bold tracking-tighter font-sans" style={{ fontFamily: 'Inter, Arial, sans-serif' }}>
           Pictionario
         </div>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <button
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
+            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-primary text-primary-foreground gap-2 hover:bg-primary-hover hover:text-primary-foreground font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
             onClick={handleCreateRoom}
             type="button"
           >
@@ -80,7 +80,7 @@ export default function Home() {
             Crear Sala
           </button>
           <button
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
+            className="rounded-full border border-solid border-border transition-colors flex items-center justify-center hover:bg-muted hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px] bg-background text-foreground"
             onClick={() => setShowModal(true)}
             type="button"
           >
@@ -91,7 +91,7 @@ export default function Home() {
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+          href="https://pictionario.vercel.app/rules"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -102,26 +102,11 @@ export default function Home() {
             width={16}
             height={16}
           />
-          Learn
+          Normas del juego
         </a>
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+          href="https://github.com/CarlesMG6"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -132,34 +117,34 @@ export default function Home() {
             width={16}
             height={16}
           />
-          Go to nextjs.org →
+          About me
         </a>
       </footer>
 
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-          <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg p-6 min-w-[320px] flex flex-col gap-4">
-            <h2 className="text-lg font-semibold mb-2">Unirse a una sala</h2>
+        <div className="fixed inset-0 flex items-center justify-center bg-foreground/40 z-50">
+          <div className="bg-background rounded-xl shadow-lg p-6 min-w-[320px] flex flex-col gap-4">
+            <h2 className="text-lg font-semibold mb-2 text-foreground">Unirse a una sala</h2>
             <input
               ref={inputRef}
-              className="border rounded px-3 py-2 text-base outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-border rounded-xl px-3 py-2 text-base outline-none focus:ring-2 focus:ring-ring"
               placeholder="Código de sala (6 caracteres)"
               maxLength={6}
               value={joinCode}
               onChange={e => setJoinCode(e.target.value)}
               autoFocus
             />
-            {error && <span className="text-red-500 text-sm">{error}</span>}
+            {error && <span className="text-destructive text-sm">{error}</span>}
             <div className="flex gap-2 justify-end">
               <button
-                className="px-4 py-2 rounded bg-gray-200 dark:bg-neutral-800 hover:bg-gray-300 dark:hover:bg-neutral-700"
+                className="px-4 py-2 rounded-xl bg-muted hover:bg-muted-hover text-foreground"
                 onClick={() => { setShowModal(false); setError(''); }}
                 type="button"
               >
                 Cancelar
               </button>
               <button
-                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground"
                 onClick={handleJoinRoom}
                 type="button"
               >

@@ -1,11 +1,27 @@
 "use client";
 
+
 import { db } from '../../../firebaseClient.js';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { collection, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { CATEGORY_WORDS, CATEGORIES } from '../../../utils/CategoryWords';
+import { useRef } from 'react';
+import { IoQrCode } from "react-icons/io5";
+
+// QR code generation (simple, no external dependency)
+function QRCode({ url, size = 128 }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!url || !ref.current) return;
+    import('qrcode').then(QR => {
+      QR.toCanvas(ref.current, url, { width: size, margin: 1, color: { dark: '#000', light: '#fff' } });
+    });
+  }, [url, size]);
+  return <canvas ref={ref} width={size} height={size} style={{ background: '#fff', borderRadius: 4, boxShadow: '0 2px 8px #0001' }} />;
+}
+
 
 function HostClient({ id }) {
   const router = useRouter();
@@ -23,13 +39,15 @@ function HostClient({ id }) {
   const [startAttempted, setStartAttempted] = useState(false);
   const [startError, setStartError] = useState("");
 
+  // Cargar datos de configuración y equipos al entrar (si existen en BBDD)
   useEffect(() => {
     if (!id || id.length !== 6) {
       router.replace('/');
       return;
     }
     let unsubRoom = null;
-    async function fetchRoomAndTeams() {
+    let unsubGameState = null;
+    async function fetchRoomAndConfig() {
       // Buscar la sala por código (campo 'code')
       const roomsQuery = query(collection(db, 'rooms'), where('code', '==', id));
       const roomsSnap = await getDocs(roomsQuery);
@@ -40,11 +58,35 @@ function HostClient({ id }) {
       unsubRoom = onSnapshot(doc(db, 'rooms', roomUuid), (roomSnap) => {
         const data = roomSnap.data();
         setTeams(Array.isArray(data?.teams) ? data.teams : []);
+        // Si hay configuración previa, cargarla
+        if (data?.duration) setDuration(data.duration);
+        if (typeof data?.round_time === 'number' || typeof data?.round_time === 'string') setRoundTime(String(data.round_time));
+        if (Array.isArray(data?.categories)) {
+          // Convertir array de categorías a objeto para los checkboxes
+          const catObj = {};
+          Object.keys(CATEGORY_WORDS).forEach(key => { catObj[key] = data.categories.includes(key); });
+          setCategories(catObj);
+        }
+      });
+      // Suscribirse a game_state para cargar la última configuración si existe
+      unsubGameState = onSnapshot(doc(db, 'game_state', roomUuid), (gameSnap) => {
+        const g = gameSnap.data();
+        if (g) {
+          // Si hay duración/categorías en game_state, usarlas como fallback
+          if (g.duration) setDuration(g.duration);
+          if (g.round_time) setRoundTime(String(g.round_time));
+          if (g.categories && Array.isArray(g.categories)) {
+            const catObj = {};
+            Object.keys(CATEGORY_WORDS).forEach(key => { catObj[key] = g.categories.includes(key); });
+            setCategories(catObj);
+          }
+        }
       });
     }
-    fetchRoomAndTeams();
+    fetchRoomAndConfig();
     return () => {
       if (unsubRoom) unsubRoom();
+      if (unsubGameState) unsubGameState();
     };
   }, [id, router]);
 
@@ -85,7 +127,10 @@ function HostClient({ id }) {
     // Obtener equipos desde el array de la sala
     const roomSnap = await getDoc(doc(db, 'rooms', room_id));
     const roomData = roomSnap.data();
-    const teamList = Array.isArray(roomData?.teams) ? roomData.teams : [];
+    let teamList = Array.isArray(roomData?.teams) ? roomData.teams : [];
+    // Fijar position: 0 a todos los equipos
+    teamList = teamList.map(t => ({ ...t, position: 0 }));
+    await updateDoc(doc(db, 'rooms', room_id), { teams: teamList });
     let firstTeamId = null;
     if (teamList && teamList.length > 0) {
       const randomIdx = Math.floor(Math.random() * teamList.length);
@@ -126,33 +171,62 @@ function HostClient({ id }) {
     await updateDoc(doc(db, 'rooms', roomUuid), { teams: newTeams });
   };
 
+  // Componente de icono QR y popover
+function QrWithPopover({ url }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <h1 className="text-7xl font-extrabold mb-4 text-center">{id}</h1>
-      <p className="text-xl text-center mb-10">
-        Accede a <span className="font-bold">pictionario.com</span> e introduce este código
-      </p>
-      <div className="flex flex-col md:flex-row gap-8 w-full max-w-5xl">
+    <div className="relative flex items-center">
+      <button
+        className="p-2 rounded-full bg-card border border-border hover:bg-primary/10 transition-colors"
+        title="Mostrar QR para unirse"
+        onClick={() => setOpen(v => !v)}
+        aria-label="Mostrar QR"
+        type="button"
+      >
+        <IoQrCode size={24} />
+      </button>
+      {open && (
+        <div className="absolute left-full top-1/2 z-50 ml-4 -translate-y-1/2 bg-card border border-border rounded-xl shadow-xl p-4 flex flex-col items-center animate-fade-in">
+          <QRCode url={url} size={140} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-background text-foreground">
+      <div className="flex flex-row items-center gap-4 mb-10">
+        <div className="flex flex-col items-center">
+          <h1 className="text-7xl font-extrabold text-center text-primary mb-0">{id}</h1>
+          <p className="text-xl text-center mt-2">
+            Accede a <span className="font-bold">pictionario.vercel.app</span> e introduce este código
+          </p>
+        </div>
+        {/* Botón QR a la derecha */}
+        <QrWithPopover url={`https://pictionario.vercel.app/join/${id}`} />
+      </div>
+      <div className="flex flex-col md:flex-row gap-8 w-full max-w-7xl">
         {/* Columna equipos */}
-        <div className={`flex-1 bg-white dark:bg-neutral-900 rounded-lg shadow p-6 flex flex-col min-w-[260px] ${startAttempted && startError ? 'border-2 border-red-500' : ''}`}>
-          <h2 className="text-2xl font-semibold mb-4">Equipos</h2>
+        <div className={`bg-card rounded-lg shadow p-6 flex flex-col min-w-[260px] w-1/3 ${startAttempted && startError ? 'border-2 border-destructive' : 'border border-border'}`}>
+          <h2 className="text-2xl text-foreground font-semibold mb-4">Equipos</h2>
           {startAttempted && startError && (
-            <div className="mb-4 text-red-600 font-bold text-center animate-pulse">
+            <div className="mb-4 text-destructive font-bold text-center animate-pulse">
               {startError}
             </div>
           )}
-          <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-col gap-4 mb-6 ">
             {teams.map((team, idx) => (
-              <div key={team.id || team.name || idx} className={`flex items-start gap-3 p-3 rounded border border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 ${startAttempted && startError ? 'ring-2 ring-red-300' : ''}`}>
-                <Image src={team.icon_url || '/vercel.svg'} alt="icono equipo" width={32} height={32} className="mt-1" />
+              <div key={team.id || team.name || idx} className={`flex items-center gap-4 px-4 py-2 rounded-xl border border-border bg-background ${startAttempted && startError ? 'ring-2 ring-destructive' : ''}`}>
+                <Image src={team.icon_url || '/vercel.svg'} alt="icono equipo" width={32} height={32} />
                 <div>
-                  <div className="font-bold text-lg">{team.name}</div>
+                  <div className="font-bold text-lg text-primary">{team.name}</div>
                   {team.members ? (
-                    <div className="text-sm text-gray-600 dark:text-gray-300">{Array.isArray(team.members) ? team.members.join(', ') : team.members}</div>
+                    <div className="text-sm text-muted-foreground">{Array.isArray(team.members) ? team.members.join(', ') : team.members}</div>
                   ) : null}
                 </div>
                 <button
-                  className="ml-auto text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded"
+                  className="ml-auto text-destructive hover:text-destructive-hover font-bold px-2 py-1 rounded"
                   onClick={() => handleRemoveTeam(team.id)}
                   title="Eliminar equipo"
                   type="button"
@@ -162,57 +236,67 @@ function HostClient({ id }) {
               </div>
             ))}
           </div>
-          <button className="mt-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded transition-colors text-lg" 
+          <button className="mt-auto w-full bg-primary hover:bg-primary-hover text-primary-foreground font-semibold py-3 rounded transition-colors text-lg" 
             onClick={e => { handleStartGame(e) }}>
             Empezar partida
           </button>
         </div>
         {/* Columna configuración */}
-        <div className="flex-1 bg-white dark:bg-neutral-900 rounded-lg shadow p-6 min-w-[260px]">
-          <h2 className="text-2xl font-semibold mb-4">Configuración</h2>
+        <div className="w-2/3 bg-card rounded-lg shadow p-6 min-w-[260px] border border-border">
+          <h2 className="text-2xl font-semibold mb-4 text-foreground">Configuración</h2>
           <form className="flex flex-col gap-6">
-            <div>
-              <label className="block font-medium mb-1">Duración de la partida</label>
-              <select
-                className="w-full border rounded px-3 py-2"
-                value={duration}
-                onChange={e => setDuration(e.target.value)}
-              >
-                <option value="corta">Corta</option>
-                <option value="media">Media</option>
-                <option value="larga">Larga</option>
-              </select>
+            <div className='flex flex-row w-full gap-4'>
+              <div className='flex-1'>
+                <label className="block font-medium mb-1">Duración de la partida</label>
+                <select
+                  className="w-full border border-border rounded-xl px-3 py-2.5 bg-background text-foreground"
+                  value={duration}
+                  onChange={e => setDuration(e.target.value)}
+                >
+                  <option value="corta">Corta</option>
+                  <option value="media">Media</option>
+                  <option value="larga">Larga</option>
+                </select>
+              </div>
+              <div className='flex-1'>
+                <label className="flex font-medium mb-1">Tiempo por ronda (segundos)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={120}
+                  className="w-full border border-border rounded-xl px-3 py-2 bg-background text-foreground"
+                  value={roundTime}
+                  onChange={e => setRoundTime(e.target.value)}
+                  onBlur={() => {
+                    if (roundTime === "" || isNaN(Number(roundTime))) {
+                      setRoundTime("45");
+                    }
+                  }}
+                  placeholder="45"
+                />
+              </div>
             </div>
             <div>
-              <label className="block font-medium mb-1">Tiempo por ronda (segundos)</label>
-              <input
-                type="number"
-                min={0}
-                max={120}
-                className="w-full border rounded px-3 py-2"
-                value={roundTime}
-                onChange={e => setRoundTime(e.target.value)}
-                onBlur={() => {
-                  if (roundTime === "" || isNaN(Number(roundTime))) {
-                    setRoundTime("45");
-                  }
-                }}
-                placeholder="45"
-              />
-            </div>
-            <div>
-              <label className="block font-medium mb-2">Categorías habilitadas</label>
-              <div className="flex flex-col gap-2">
-                {CATEGORIES.map((cat) => (
-                  <label key={cat.key} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={!!categories[cat.key]}
-                      onChange={() => handleCategoryToggle(cat.key)}
-                    />
-                    <span style={{ color: cat.color }}>{cat.label}</span>
-                  </label>
-                ))}
+              <label className="block font-base text-lg mb-2">Categorías</label>
+              <div className="grid grid-cols-4 gap-4 mt-2">
+                {CATEGORIES.map((cat) => {
+                  const Icon = cat.icon;
+                  const selected = !!categories[cat.key];
+                  return (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => handleCategoryToggle(cat.key)}
+                      className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all shadow-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 select-none
+                        ${selected ? 'border-2 border-primary ring-2 ring-primary/30' : 'border-2 border-background hover:border-primary/50'}`}
+                      style={{ minHeight: 90 }}
+                      tabIndex={0}
+                    >
+                      {Icon && <Icon size={28} className={selected ? 'text-primary' : 'text-muted-foreground'} />}
+                      <span className={`text-sm font-semibold ${selected ? 'text-primary' : 'text-foreground'}`}>{cat.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </form>
