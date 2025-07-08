@@ -171,44 +171,59 @@ function HostClient({ id }) {
     await updateDoc(doc(db, 'rooms', roomUuid), { teams: newTeams });
   };
 
-  // Componente de icono QR y popover
-function QrWithPopover({ url }) {
+// Componente de icono QR y modal responsive
+function QrWithModal({ url }) {
   const [open, setOpen] = useState(false);
+  // Cierra el modal al hacer click fuera del contenido
+  function handleOverlayClick(e) {
+    if (e.target === e.currentTarget) setOpen(false);
+  }
   return (
-    <div className="relative flex items-center">
+    <>
       <button
         className="p-2 rounded-full bg-card border border-border hover:bg-primary/10 transition-colors"
         title="Mostrar QR para unirse"
-        onClick={() => setOpen(v => !v)}
+        onClick={() => setOpen(true)}
         aria-label="Mostrar QR"
         type="button"
       >
         <IoQrCode size={24} />
       </button>
       {open && (
-        <div className="absolute left-full top-1/2 z-50 ml-4 -translate-y-1/2 bg-card border border-border rounded-xl shadow-xl p-4 flex flex-col items-center animate-fade-in">
-          <QRCode url={url} size={140} />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 animate-fade-in"
+          onClick={handleOverlayClick}
+        >
+          <div className="bg-card rounded-2xl shadow-2xl p-8 flex flex-col items-center relative min-w-[260px] max-w-11/12 min-h-[260px]">
+            <div className="text-lg font-bold mb-2 text-center">Únete a la partida</div>
+            <div className="mb-2 text-center text-muted-foreground">Entra en <span className="font-semibold">pictionario.vercel.app</span> e introduce este código:</div>
+            <div className="text-4xl font-extrabold text-primary mb-4 text-center tracking-widest">{url.split('/').pop()}</div>
+            <div className="mb-2 text-center text-muted-foreground">O escanea este QR:</div>
+            <QRCode url={url} size={160} />
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-background text-foreground">
-      <div className="flex flex-row items-center gap-4 mb-10">
-        <div className="flex flex-col items-center">
+      <div className="flex flex-col sm:flex-row items-center gap-4 mb-10 w-full max-w-2xl mx-auto">
+        <div className="flex flex-col items-center flex-1">
           <h1 className="text-7xl font-extrabold text-center text-primary mb-0">{id}</h1>
           <p className="text-xl text-center mt-2">
             Accede a <span className="font-bold">pictionario.vercel.app</span> e introduce este código
           </p>
         </div>
-        {/* Botón QR a la derecha */}
-        <QrWithPopover url={`https://pictionario.vercel.app/join/${id}`} />
+        {/* Botón QR: debajo en móvil, a la derecha en desktop */}
+        <div className="w-full flex justify-center sm:w-auto sm:block mt-4 sm:mt-0">
+          <QrWithModal url={`https://pictionario.vercel.app/join/${id}`} />
+        </div>
       </div>
       <div className="flex flex-col md:flex-row gap-8 w-full max-w-7xl">
         {/* Columna equipos */}
-        <div className={`bg-card rounded-lg shadow p-6 flex flex-col min-w-[260px] w-1/3 ${startAttempted && startError ? 'border-2 border-destructive' : 'border border-border'}`}>
+        <div className={`bg-card rounded-lg shadow p-6 flex flex-col min-w-[260px] w-full md:w-1/3 ${startAttempted && startError ? 'border-2 border-destructive' : 'border border-border'}`}>
           <h2 className="text-2xl text-foreground font-semibold mb-4">Equipos</h2>
           {startAttempted && startError && (
             <div className="mb-4 text-destructive font-bold text-center animate-pulse">
@@ -242,10 +257,10 @@ function QrWithPopover({ url }) {
           </button>
         </div>
         {/* Columna configuración */}
-        <div className="w-2/3 bg-card rounded-lg shadow p-6 min-w-[260px] border border-border">
+        <div className="w-full md:w-2/3 bg-card rounded-lg shadow p-6 min-w-[260px] border border-border">
           <h2 className="text-2xl font-semibold mb-4 text-foreground">Configuración</h2>
           <form className="flex flex-col gap-6">
-            <div className='flex flex-row w-full gap-4'>
+            <div className='flex flex-col md:flex-row w-full gap-4'>
               <div className='flex-1'>
                 <label className="block font-medium mb-1">Duración de la partida</label>
                 <select
@@ -278,7 +293,7 @@ function QrWithPopover({ url }) {
             </div>
             <div>
               <label className="block font-base text-lg mb-2">Categorías</label>
-              <div className="grid grid-cols-4 gap-4 mt-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                 {CATEGORIES.map((cat) => {
                   const Icon = cat.icon;
                   const selected = !!categories[cat.key];
