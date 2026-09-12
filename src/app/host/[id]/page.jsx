@@ -3,24 +3,13 @@
 
 import { db } from '../../../firebaseClient.js';
 import Image from 'next/image';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { collection, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { CATEGORY_WORDS, CATEGORIES } from '../../../utils/CategoryWords';
-import { useRef } from 'react';
+import { CATEGORY_WORDS, CATEGORIES, DIFFICULTIES, DEFAULT_DIFFICULTY, pickWord } from '../../../utils/CategoryWords';
+import QRCode from '../../../components/QRCode';
 import { IoQrCode } from "react-icons/io5";
-
-// QR code generation (simple, no external dependency)
-function QRCode({ url, size = 128 }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!url || !ref.current) return;
-    import('qrcode').then(QR => {
-      QR.toCanvas(ref.current, url, { width: size, margin: 1, color: { dark: '#000', light: '#fff' } });
-    });
-  }, [url, size]);
-  return <canvas ref={ref} width={size} height={size} style={{ background: '#fff', borderRadius: 4, boxShadow: '0 2px 8px #0001' }} />;
-}
 
 
 function HostClient({ id }) {
@@ -28,6 +17,7 @@ function HostClient({ id }) {
   const [teams, setTeams] = useState([]);
   const [duration, setDuration] = useState('media');
   const [roundTime, setRoundTime] = useState('45');
+  const [gameDifficulty, setGameDifficulty] = useState(DEFAULT_DIFFICULTY);
   const [categories, setCategories] = useState({
     all: true,
     person: true,
@@ -61,6 +51,7 @@ function HostClient({ id }) {
         // Si hay configuración previa, cargarla
         if (data?.duration) setDuration(data.duration);
         if (typeof data?.round_time === 'number' || typeof data?.round_time === 'string') setRoundTime(String(data.round_time));
+        if (data?.difficulty) setGameDifficulty(data.difficulty);
         if (Array.isArray(data?.categories)) {
           // Convertir array de categorías a objeto para los checkboxes
           const catObj = {};
@@ -75,6 +66,7 @@ function HostClient({ id }) {
           // Si hay duración/categorías en game_state, usarlas como fallback
           if (g.duration) setDuration(g.duration);
           if (g.round_time) setRoundTime(String(g.round_time));
+          if (g.difficulty) setGameDifficulty(g.difficulty);
           if (g.categories && Array.isArray(g.categories)) {
             const catObj = {};
             Object.keys(CATEGORY_WORDS).forEach(key => { catObj[key] = g.categories.includes(key); });
@@ -122,6 +114,7 @@ function HostClient({ id }) {
       duration,
       round_time: parseInt(roundTime, 10),
       categories: selectedCategories,
+      difficulty: gameDifficulty,
       playing: true
     });
     // Obtener equipos desde el array de la sala
@@ -141,8 +134,7 @@ function HostClient({ id }) {
     if (selectedCategories.length > 0) {
       initialCategory = selectedCategories[Math.floor(Math.random() * selectedCategories.length)];
     }
-    function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-    const initialWord = getRandomElement(CATEGORY_WORDS[initialCategory] || CATEGORY_WORDS['all']);
+    const initialWord = pickWord(initialCategory, gameDifficulty);
     // Crear estado de juego
     await setDoc(doc(db, 'game_state', room_id), {
       room_id,
@@ -150,6 +142,8 @@ function HostClient({ id }) {
       current_phase: 'play',
       current_word: initialWord,
       current_category: initialCategory,
+      difficulty: gameDifficulty,
+      used_words: initialWord ? [initialWord] : [],
       dice_value: null,
       is_active: true
     });
@@ -292,6 +286,26 @@ function QrWithModal({ url }) {
               </div>
             </div>
             <div>
+              <label className="block font-base text-lg mb-2">Dificultad</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {DIFFICULTIES.map((diff) => {
+                  const selected = gameDifficulty === diff.key;
+                  return (
+                    <button
+                      key={diff.key}
+                      type="button"
+                      onClick={() => setGameDifficulty(diff.key)}
+                      className={`flex flex-col items-start gap-1 p-4 rounded-xl border text-left transition-all shadow-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 select-none
+                        ${selected ? 'border-2 border-primary ring-2 ring-primary/30' : 'border-2 border-background hover:border-primary/50'}`}
+                    >
+                      <span className={`text-base font-bold ${selected ? 'text-primary' : 'text-foreground'}`}>{diff.label}</span>
+                      <span className="text-xs text-muted-foreground leading-snug">{diff.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
               <label className="block font-base text-lg mb-2">Categorías</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                 {CATEGORIES.map((cat) => {
@@ -322,5 +336,6 @@ function QrWithModal({ url }) {
 }
 
 export default function Page({ params }) {
-  return <HostClient id={params.id} />;
+  const resolvedParams = typeof params?.then === 'function' ? React.use(params) : params;
+  return <HostClient id={resolvedParams.id} />;
 }

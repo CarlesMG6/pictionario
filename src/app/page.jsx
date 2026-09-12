@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import Image from "next/image";
 import { db } from '../firebaseClient.js';
+import { WORLD_VERSION } from '../game/worldGenerator';
 import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, serverTimestamp } from 'firebase/firestore';
 
 function generateRoomId() {
@@ -29,7 +30,11 @@ export default function Home() {
       code,
       createdAt: serverTimestamp(),
       playing: false,
-      teams: []
+      teams: [],
+      // El mundo 3D se genera a partir de esta semilla. Se fija al crear la sala
+      // para que tocar el generador no le cambie el mapa a una partida en curso.
+      world_seed: Math.floor(Math.random() * 1e9),
+      world_version: WORLD_VERSION,
     });
     router.push(`/host/${code}`);
   };

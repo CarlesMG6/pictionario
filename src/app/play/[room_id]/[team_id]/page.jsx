@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../../../../firebaseClient.js';
 import { GameLogic } from '../../../../utils/GameLogic';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { CATEGORY_WORDS } from '../../../../utils/CategoryWords';
+import { pickWord, DEFAULT_DIFFICULTY } from '../../../../utils/CategoryWords';
 import { updateDoc } from 'firebase/firestore';
 import { FaArrowsRotate } from "react-icons/fa6";
 
@@ -22,7 +22,6 @@ export default function PlayPage({ params }) {
     setIsProcessing(true);
     console.log('/play -> Acierto en la ronda');
     await GameLogic.success(room_id);
-    setShowStartRound(false);
     setShowWord(false);
     setIsProcessing(false);
   };
@@ -31,7 +30,6 @@ export default function PlayPage({ params }) {
     setIsProcessing(true);
     console.log('/play -> Fallo en la ronda');
     await GameLogic.fail(room_id);
-    setShowStartRound(false);
     setShowWord(false);
     setIsProcessing(false);
   };
@@ -117,11 +115,15 @@ export default function PlayPage({ params }) {
     // Botón para regenerar palabra
     const handleRegenerateWord = async () => {
       if (!gameState.current_category) return;
-      const words = CATEGORY_WORDS[gameState.current_category] || CATEGORY_WORDS['all'] || [];
-      // Evitar la palabra actual
-      const filtered = words.filter(w => w !== gameState.current_word);
-      const newWord = filtered.length > 0 ? filtered[Math.floor(Math.random() * filtered.length)] : gameState.current_word;
-      await updateDoc(doc(db, 'game_state', room_id), { current_word: newWord });
+      const difficulty = gameState.difficulty || DEFAULT_DIFFICULTY;
+      // Respeta la dificultad de la partida y no repite lo ya jugado.
+      const used = Array.isArray(gameState.used_words) ? gameState.used_words : [];
+      const newWord = pickWord(gameState.current_category, difficulty, used);
+      if (!newWord || newWord === gameState.current_word) return;
+      await updateDoc(doc(db, 'game_state', room_id), {
+        current_word: newWord,
+        used_words: [...used, newWord].slice(-400),
+      });
     };
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-8 max-w-sm m-auto">

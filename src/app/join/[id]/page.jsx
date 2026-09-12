@@ -104,9 +104,16 @@ function MemberInput({ value, onChange, onKeyDown, onBlur, onAdd, ...props }) {
 }
 
 function JoinPage({ params }) {
-  const id = params.id;
+  const resolvedParams = typeof params?.then === 'function' ? React.use(params) : params;
+  const id = resolvedParams.id;
   const router = useRouter();
-  const [icon, setIcon] = useState(() => getRandomIcon());
+  // El icono arranca fijo y se sortea al montar: sorteándolo en el estado
+  // inicial, servidor y cliente eligen distinto y React avisa de que la
+  // hidratación no cuadra.
+  const [icon, setIcon] = useState(ICONS[0]);
+  useEffect(() => {
+    setIcon(getRandomIcon());
+  }, []);
   const [teamName, setTeamName] = useState('');
   const [memberInput, setMemberInput] = useState('');
   const [members, setMembers] = useState([]);

@@ -108,3 +108,68 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* --- UI de juego ---------------------------------------------------------
+   Paneles planos, borde grueso y sombra dura desplazada: nada de cristal
+   esmerilado ni esquinas muy redondeadas. Es el lenguaje del juego de
+   referencia, y es lo que separa esto de un panel de administración.
+
+   Los textos van en mayúsculas con separación en vez de en negrita: el peso
+   fuerte se reserva a las cifras, que son lo que hay que leer desde lejos. */
+
+.gp-panel {
+  background: #fdf6e8;
+  color: #23222b;
+  border: 3px solid #23222b;
+  border-radius: 8px;
+  box-shadow: 0 5px 0 rgba(35, 34, 43, 0.4);
+}
+
+.gp-panel--dark {
+  background: #2b2a35;
+  color: #fdf6e8;
+  border-color: #14131a;
+  box-shadow: 0 5px 0 rgba(10, 10, 14, 0.45);
+}
+
+.gp-label {
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 600;
+}
+
+.gp-caption {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  font-size: 0.68rem;
+  opacity: 0.62;
+}
+
+/* Cifras: es lo único que va pesado, e inclinado para que lea como marcador. */
+.gp-number {
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.gp-button {
+  border: 3px solid #23222b;
+  border-radius: 8px;
+  box-shadow: 0 4px 0 rgba(35, 34, 43, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.gp-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 rgba(35, 34, 43, 0.4);
+}
+
+/* El botón se hunde al pulsarlo, como una tecla física. */
+.gp-button:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 rgba(35, 34, 43, 0.4);
+}

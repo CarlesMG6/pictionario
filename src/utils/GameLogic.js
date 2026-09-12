@@ -1,10 +1,16 @@
 import { db } from '../firebaseClient.js';
 import { collection, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy } from 'firebase/firestore';
-import { CATEGORY_WORDS } from './CategoryWords';
+import { pickWord, DEFAULT_DIFFICULTY } from './CategoryWords';
+import { buildBoard } from '../game/board';
 
-function getRandomElement(arr) {
-    if (!Array.isArray(arr) || arr.length === 0) return '';
-    return arr[Math.floor(Math.random() * arr.length)];
+// Las palabras ya jugadas se guardan en game_state.used_words para no repetir
+// dentro de la misma partida. Se recorta para no engordar el documento.
+const MAX_USED_WORDS = 400;
+
+function rememberWord(used, word) {
+    if (!word) return Array.isArray(used) ? used : [];
+    const next = [...(Array.isArray(used) ? used : []), word];
+    return next.length > MAX_USED_WORDS ? next.slice(-MAX_USED_WORDS) : next;
 }
 
 async function checkAndEndGameIfNeeded(room_id) {
@@ -21,11 +27,7 @@ async function checkAndEndGameIfNeeded(room_id) {
     if (!team) return false;
     const categories = roomData?.categories || ['all'];
     const duration = roomData?.duration || 'media';
-    const BOARD_SIZES = { corta: 23, media: 39, larga: 55 };
-    const size = BOARD_SIZES[duration] || BOARD_SIZES.media;
-    let catArr = Array.isArray(categories) ? categories : Object.keys(categories);
-    if (catArr.length === 0) catArr = ['all'];
-    const boardArr = Array.from({ length: size }, (_, i) => catArr[i % catArr.length]);
+    const boardArr = buildBoard(categories, duration);
     const lastCell = boardArr.length - 1;
     if (team.position >= lastCell) {
         // Setear fase end y guardar ranking
@@ -74,19 +76,15 @@ export class GameLogic {
         // Obtener tablero
         const categories = roomData?.categories || ['all'];
         const duration = roomData?.duration || 'media';
-        const BOARD_SIZES = { corta: 23, media: 39, larga: 55 };
-        const size = BOARD_SIZES[duration] || BOARD_SIZES.media;
-        let catArr = Array.isArray(categories) ? categories : Object.keys(categories);
-        if (catArr.length === 0) catArr = ['all'];
-        const boardArr = Array.from({ length: size }, (_, i) => catArr[i % catArr.length]);
+        const boardArr = buildBoard(categories, duration);
         // Posición del siguiente equipo
         const pos = nextTeam.position || 0;
         console.log(`Posición del equipo ${nextTeam.id}: ${pos}`);
         console.log(`Categoría del equipo ${nextTeam.id}: ${boardArr[pos]}`);
         const category = boardArr[pos];
         console.log(`Categoría seleccionada: ${category}`);
-        console.log(`Palabras disponibles para la categoría ${category}:`, CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
-        const word = getRandomElement(CATEGORY_WORDS[category] || CATEGORY_WORDS['all']);
+        const difficulty = roomData?.difficulty || DEFAULT_DIFFICULTY;
+        const word = pickWord(category, difficulty, state.used_words);
         // Calcular all_play usando el método extraído
         const allPlay = GameLogic.shouldAllPlay(category);
         // Actualizar game_state
@@ -97,6 +95,7 @@ export class GameLogic {
             current_category: category,
             current_word: word,
             all_play: allPlay,
+            used_words: rememberWord(state.used_words, word),
         });
         // No hay canales, rely on onSnapshot
     }
