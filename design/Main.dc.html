@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:ital,wght@0,600;0,700;0,800;1,800;1,900&display=swap">
+  <style>
+    body { margin: 0; font-family: Nunito, 'Trebuchet MS', sans-serif; }
+    a { color: #23222b; text-decoration: none; }
+    a:hover { color: #7A4E33; }
+
+    /* Una letra del título es una casilla del tablero: anillo crema, disco de
+       color y glifo blanco. Misma anatomía que PathTile en el mundo 3D. */
+    .tile { position: relative; width: 86px; height: 96px; flex: none; }
+    .tile i {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      border-radius: 50%; display: block;
+    }
+    .tile .base { bottom: 0; width: 86px; height: 30px; background: #FBF3E2;
+      box-shadow: 0 4px 0 rgba(27, 55, 80, 0.22); }
+    .tile .rim { bottom: 10px; width: 72px; height: 26px; filter: brightness(0.72); }
+    .tile .top { bottom: 18px; width: 72px; height: 58px;
+      display: flex; align-items: center; justify-content: center; }
+    .tile span {
+      font-family: 'Baloo 2', Nunito, sans-serif; font-weight: 800;
+      font-size: 38px; color: #fff; line-height: 1;
+      transform: scaleY(1.18); letter-spacing: 0;
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.16);
+    }
+    .cloud { position: absolute; background: #fff; border-radius: 999px; opacity: 0.92; }
+
+    .gp-button {
+      border: 3px solid #23222b; border-radius: 8px;
+      box-shadow: 0 4px 0 rgba(35, 34, 43, 0.4);
+      text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800;
+      font-family: Nunito, sans-serif; cursor: pointer;
+    }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #6FCDF2;">
+
+  <!-- Cielo -->
+  <div style="position: absolute; inset: 0 0 38% 0; background: linear-gradient(180deg, #6FCDF2 0%, #A6E1F7 60%, #CDEEFF 100%);"></div>
+
+  <!-- Nubes -->
+  <div class="cloud" style="left: 120px; top: 96px; width: 210px; height: 56px;"></div>
+  <div class="cloud" style="left: 186px; top: 68px; width: 118px; height: 62px;"></div>
+  <div class="cloud" style="left: 1090px; top: 150px; width: 260px; height: 62px;"></div>
+  <div class="cloud" style="left: 1172px; top: 118px; width: 132px; height: 68px;"></div>
+  <div class="cloud" style="left: 640px; top: 58px; width: 150px; height: 40px; opacity: 0.6;"></div>
+
+  <!-- Mar -->
+  <div style="position: absolute; inset: 62% 0 0 0; background: linear-gradient(180deg, #8FE5F0 0%, #3FB8DE 26%, #1B8FC4 100%);"></div>
+
+  <!-- Isla bajo el título. Contorno irregular, talud tendido y manchas de
+       hierba: el mismo lenguaje que genera islandShape.js. -->
+  <svg viewBox="0 0 560 200" style="position: absolute; left: 50%; top: 452px; width: 760px; margin-left: -380px;">
+    <ellipse cx="286" cy="128" rx="268" ry="66" fill="#1B8FC4" opacity="0.35"/>
+    <path d="M34 120 C34 88 94 62 152 56 C214 49 252 66 304 61 C362 56 428 68 478 84 C520 97 530 118 512 136 C490 158 418 170 336 172 C244 174 144 164 82 149 C48 141 34 132 34 120 Z" fill="#C3A176"/>
+    <path d="M40 112 C40 82 96 60 152 54 C212 47 250 63 300 58 C354 53 418 65 466 80 C506 92 516 111 500 127 C480 146 414 158 336 160 C248 162 150 152 90 138 C58 130 40 122 40 112 Z" fill="#DEC195"/>
+    <path d="M52 106 C52 80 102 60 154 54 C210 48 248 62 296 58 C346 53 404 64 448 78 C484 89 494 106 479 120 C461 137 400 148 330 150 C248 152 158 143 102 130 C70 122 52 114 52 106 Z" fill="#F2DCB3"/>
+    <path d="M118 96 C132 76 186 66 232 72 C274 78 284 96 258 106 C228 118 168 118 136 110 C118 106 112 102 118 96 Z" fill="#72C86A"/>
+    <path d="M330 78 C356 68 404 72 428 82 C448 90 442 102 416 106 C384 111 340 104 326 94 C319 88 322 81 330 78 Z" fill="#3F9E58"/>
+  </svg>
+
+  <!-- Palmera y rocas: props del mundo, a escala de decorado -->
+  <svg viewBox="0 0 120 150" style="position: absolute; left: 50%; top: 392px; width: 118px; margin-left: 214px;">
+    <path d="M58 148 C54 118 54 96 60 74 L70 76 C66 98 66 120 68 148 Z" fill="#A9714B"/>
+    <path d="M64 74 C86 58 110 62 118 74 C104 72 84 76 68 86 Z" fill="#3F9E58"/>
+    <path d="M64 72 C50 52 24 48 10 58 C28 58 46 68 60 82 Z" fill="#72C86A"/>
+    <path d="M66 70 C74 46 64 22 46 14 C56 34 58 54 58 74 Z" fill="#3F9E58"/>
+    <path d="M66 72 C86 54 102 30 98 12 C88 34 74 52 60 70 Z" fill="#72C86A"/>
+  </svg>
+  <svg viewBox="0 0 100 60" style="position: absolute; left: 50%; top: 492px; width: 96px; margin-left: -376px;">
+    <path d="M8 54 C4 40 14 22 32 16 C54 9 78 16 88 30 C96 42 92 54 80 56 C58 60 22 60 8 54 Z" fill="#8C93A8"/>
+    <path d="M18 34 C24 24 40 18 56 20 C44 26 30 32 22 40 Z" fill="#A7AEC0"/>
+  </svg>
+
+  <!-- Título: arco de casillas. Cada letra lleva un color de categoría, igual
+       que el camino del tablero. -->
+  <div style="position: absolute; left: 0; right: 0; top: 236px; display: flex; justify-content: center; align-items: flex-end; gap: 6px;">
+    <div class="tile" style="transform: translateY(55px) rotate(-11deg);">
+      <i class="base"></i><i class="rim" style="background: #ef4444;"></i>
+      <i class="top" style="background: #ef4444;"><span>P</span></i>
+    </div>
+    <div class="tile" style="transform: translateY(35px) rotate(-8.8deg);">
+      <i class="base"></i><i class="rim" style="background: #fbbf24;"></i>
+      <i class="top" style="background: #fbbf24;"><span>I</span></i>
+    </div>
+    <div class="tile" style="transform: translateY(20px) rotate(-6.6deg);">
+      <i class="base"></i><i class="rim" style="background: #3b82f6;"></i>
+      <i class="top" style="background: #3b82f6;"><span>C</span></i>
+    </div>
+    <div class="tile" style="transform: translateY(9px) rotate(-4.4deg);">
+      <i class="base"></i><i class="rim" style="background: #10b981;"></i>
+      <i class="top" style="background: #10b981;"><span>T</span></i>
+    </div>
+    <div class="tile" style="transform: translateY(2px) rotate(-2.2deg);">
+      <i class="base"></i><i class="rim" style="background: #ec4899;"></i>
+      <i class="top" style="background: #ec4899;"><span>I</span></i>
+    </div>
+    <div class="tile">
+      <i class="base"></i><i class="rim" style="background: #8b5cf6;"></i>
+      <i class="top" style="background: #8b5cf6;"><span>O</span></i>
+    </div>
+    <div class="tile" style="transform: translateY(2px) rotate(2.2deg);">
+      <i class="base"></i><i class="rim" style="background: #fb923c;"></i>
+      <i class="top" style="background: #fb923c;"><span>N</span></i>
+    </div>
+    <div class="tile" style="transform: translateY(9px) rotate(4.4deg);">
+      <i class="base"></i><i class="rim" style="background: #0ea5e9;"></i>
+      <i class="top" style="background: #0ea5e9;"><span>A</span></i>
+    </div>
+    <div class="tile" style="transform: translateY(20px) rotate(6.6deg);">
+      <i class="base"></i><i class="rim" style="background: #84cc16;"></i>
+      <i class="top" style="background: #84cc16;"><span>R</span></i>
+    </div>
+    <div class="tile" style="transform: translateY(35px) rotate(8.8deg);">
+      <i class="base"></i><i class="rim" style="background: #14b8a6;"></i>
+      <i class="top" style="background: #14b8a6;"><span>I</span></i>
+    </div>
+    <div class="tile" style="transform: translateY(55px) rotate(11deg);">
+      <i class="base"></i><i class="rim" style="background: #6366f1;"></i>
+      <i class="top" style="background: #6366f1;"><span>O</span></i>
+    </div>
+  </div>
+
+  <!-- Acciones -->
+  <div style="position: absolute; left: 0; right: 0; top: 606px; display: flex; justify-content: center; gap: 20px;">
+    <button class="gp-button" style="background: #fbbf24; color: #23222b; font-size: 22px; padding: 20px 46px;">Crear sala</button>
+    <button class="gp-button" style="background: #FDF6E8; color: #23222b; font-size: 22px; padding: 20px 46px;">Unirme a una sala</button>
+  </div>
+
+  <!-- Pie -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 40px; display: flex; justify-content: center; gap: 14px;">
+    <a href="#" style="background: #FDF6E8; border: 3px solid #23222b; border-radius: 8px; box-shadow: 0 4px 0 rgba(35,34,43,0.4); padding: 11px 20px; display: flex; align-items: center; gap: 9px; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; font-size: 13px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#23222b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6"/></svg>
+      Normas del juego
+    </a>
+    <a href="#" style="background: #FDF6E8; border: 3px solid #23222b; border-radius: 8px; box-shadow: 0 4px 0 rgba(35,34,43,0.4); padding: 11px 20px; display: flex; align-items: center; gap: 9px; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; font-size: 13px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#23222b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.6 2.5 12.4 0 16M12 4c-2.5 2.6-2.5 12.4 0 16"/></svg>
+      Sobre mí
+    </a>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

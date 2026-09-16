@@ -11,8 +11,7 @@ import { useDiceRoll } from '../../../hooks/useDiceRoll';
 import CurrentCategory from '../../../components/hud/CurrentCategory';
 import TeamsBar from '../../../components/hud/TeamsBar';
 import HelpPanel from '../../../components/hud/HelpPanel';
-import DiceModal from '../../../components/modals/DiceModal';
-import TimerModal from '../../../components/modals/TimerModal';
+import RoundStage from '../../../components/hud/RoundStage';
 import EndGameModal from '../../../components/modals/EndGameModal';
 import QrModal from '../../../components/modals/QrModal';
 
@@ -50,35 +49,37 @@ export default function HostPlayPage({ params }) {
   );
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-sky-300">
+    <div className="fixed inset-0 overflow-hidden bg-[#6fcdf2]">
       {board.length > 0 ? (
         <BoardWorld seed={worldSeed} board={board} teams={pawns} />
       ) : (
-        <div className="flex h-full items-center justify-center text-lg text-slate-600">
-          Cargando mundo...
+        <div className="flex h-full flex-col items-center justify-center gap-3">
+          <div className="gp-display text-3xl text-white drop-shadow-[0_3px_0_rgba(27,55,80,0.45)]">
+            Pictionario
+          </div>
+          <div className="gp-caption text-white/90">Levantando la isla</div>
         </div>
       )}
 
-      <div className="pointer-events-none absolute left-5 top-5 text-xl font-bold tracking-tighter text-white drop-shadow-lg">
+      <div className="gp-display pointer-events-none absolute left-6 top-6 z-40 text-2xl text-white drop-shadow-[0_3px_0_rgba(27,55,80,0.5)]">
         Pictionario
       </div>
 
       <CurrentCategory categoryKey={gameState?.current_category} allPlay={gameState?.all_play} />
 
+      {/* Lo que la sala tiene que mirar ahora mismo: a quién esperamos, el reloj
+          de la ronda o el dado. Todo lo demás es marco. */}
+      <RoundStage
+        phase={phase}
+        teams={teams}
+        gameState={gameState}
+        round={round}
+        dice={dice}
+      />
+
       <TeamsBar teams={teams} currentTeamId={gameState?.current_turn_team} totalTiles={board.length} />
 
       <HelpPanel categories={roomConfig?.categories} onJoin={() => setShowQrModal(true)} />
-
-      {round.visible && (
-        <TimerModal
-          phase={phase}
-          countdown={round.countdown}
-          timer={round.timer}
-          duration={round.duration}
-        />
-      )}
-
-      {dice.rolling && <DiceModal value={dice.value} />}
 
       {phase === 'end' && (
         <EndGameModal

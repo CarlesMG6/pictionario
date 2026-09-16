@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:ital,wght@0,600;0,700;0,800;1,800;1,900&display=swap">
+  <style>
+    body { margin: 0; font-family: Nunito, 'Trebuchet MS', sans-serif; }
+    a { color: #23222b; } a:hover { color: #7A4E33; }
+    .gp-panel { background: #FDF6E8; color: #23222b; border: 3px solid #23222b; border-radius: 8px; box-shadow: 0 5px 0 rgba(35,34,43,0.4); }
+    .gp-label { text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; }
+    .gp-caption { text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; font-size: 0.68rem; opacity: 0.62; }
+    .gp-number { font-style: italic; font-weight: 900; letter-spacing: -0.03em; }
+    code { font-family: 'Courier New', monospace; font-size: 12.5px; background: #EFE4CE; padding: 1px 6px; border-radius: 4px; }
+    .row { display: flex; gap: 10px; align-items: baseline; font-size: 13.5px; line-height: 1.45; }
+    .row b { flex: none; width: 118px; text-transform: uppercase; letter-spacing: 0.07em; font-size: 11px; opacity: 0.55; padding-top: 2px; }
+  </style>
+</helmet>
+
+<div style="width: 1240px; height: 820px; background: #EAF7FF; padding: 36px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px;">
+
+  <div>
+    <div class="gp-caption">Modelo 3D · título</div>
+    <div class="gp-label" style="font-size: 30px; margin-top: 4px;">El título es un tramo del tablero</div>
+    <div style="font-size: 14.5px; line-height: 1.5; max-width: 760px; margin-top: 8px; opacity: 0.78;">
+      Cada letra es una casilla: anillo crema, disco del color de una categoría y glifo blanco impreso encima.
+      Misma anatomía que <code>PathTile</code>, mismas geometrías y mismo acabado de arcilla — así que no hace falta
+      ni una fuente 3D ni un modelo aparte.
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 22px; flex: 1;">
+
+    <!-- Anatomía explotada -->
+    <div class="gp-panel" style="width: 400px; padding: 24px; display: flex; flex-direction: column;">
+      <div class="gp-label" style="font-size: 16px; margin-bottom: 4px;">Anatomía de una letra</div>
+      <div class="gp-caption" style="margin-bottom: 14px;">Vista explotada · alzado</div>
+
+      <svg viewBox="0 0 340 330" style="width: 100%;">
+        <!-- glifo -->
+        <ellipse cx="150" cy="40" rx="86" ry="26" fill="#fff" opacity="0.25"/>
+        <text x="150" y="52" text-anchor="middle" font-family="Baloo 2, Nunito, sans-serif" font-size="46" font-weight="800" fill="#fff" stroke="#23222b" stroke-width="1.4">P</text>
+        <path d="M150 72 v26" stroke="#23222b" stroke-width="2" stroke-dasharray="4 4"/>
+        <text x="252" y="46" font-family="Nunito" font-size="11.5" font-weight="700" fill="#23222b" letter-spacing="1">GLIFO</text>
+        <text x="252" y="60" font-family="Nunito" font-size="10.5" fill="#23222b" opacity="0.6">CanvasTexture</text>
+
+        <!-- disco -->
+        <ellipse cx="150" cy="150" rx="86" ry="28" fill="#ef4444"/>
+        <path d="M64 150 v20 a86 28 0 0 0 172 0 v-20" fill="#b93030"/>
+        <ellipse cx="150" cy="150" rx="86" ry="28" fill="#ef4444"/>
+        <path d="M150 198 v24" stroke="#23222b" stroke-width="2" stroke-dasharray="4 4"/>
+        <text x="252" y="150" font-family="Nunito" font-size="11.5" font-weight="700" fill="#23222b" letter-spacing="1">DISCO</text>
+        <text x="252" y="164" font-family="Nunito" font-size="10.5" fill="#23222b" opacity="0.6">r 1.0 · h 0.34</text>
+
+        <!-- base -->
+        <ellipse cx="150" cy="256" rx="104" ry="34" fill="#FBF3E2"/>
+        <path d="M46 256 v14 a104 34 0 0 0 208 0 v-14" fill="#DCCFB4"/>
+        <ellipse cx="150" cy="256" rx="104" ry="34" fill="#FBF3E2"/>
+        <text x="266" y="256" font-family="Nunito" font-size="11.5" font-weight="700" fill="#23222b" letter-spacing="1">BASE</text>
+        <text x="266" y="270" font-family="Nunito" font-size="10.5" fill="#23222b" opacity="0.6">r 1.2 · h 0.16</text>
+
+        <ellipse cx="150" cy="306" rx="106" ry="16" fill="#23222b" opacity="0.16"/>
+      </svg>
+
+      <div style="display: flex; flex-direction: column; gap: 7px; margin-top: 10px;">
+        <div class="row"><b>Geometría</b><span><code>roundedCylinderGeometry</code></span></div>
+        <div class="row"><b>Material</b><span><code>CLAY</code> · roughness 0.78 · metalness 0</span></div>
+        <div class="row"><b>Glifo</b><span>textura de canvas, como los iconos de categoría</span></div>
+      </div>
+    </div>
+
+    <!-- Composición -->
+    <div class="gp-panel" style="flex: 1; padding: 24px; display: flex; flex-direction: column;">
+      <div class="gp-label" style="font-size: 16px; margin-bottom: 4px;">Composición en arco</div>
+      <div class="gp-caption" style="margin-bottom: 20px;">Once casillas sobre una isla · planta y alzado</div>
+
+      <!-- Planta: el arco visto desde arriba -->
+      <svg viewBox="0 0 720 150" style="width: 100%;">
+        <path d="M40 112 C160 34 560 34 680 112" stroke="#23222b" stroke-width="2.5" stroke-dasharray="6 6" fill="none" opacity="0.35"/>
+        <g>
+          <circle cx="40" cy="112" r="21" fill="#ef4444" stroke="#23222b" stroke-width="2.5"/>
+          <circle cx="104" cy="87" r="21" fill="#fbbf24" stroke="#23222b" stroke-width="2.5"/>
+          <circle cx="168" cy="69" r="21" fill="#3b82f6" stroke="#23222b" stroke-width="2.5"/>
+          <circle cx="232" cy="57" r="21" fill="#10b981" stroke="#23222b" stroke-width="2.5"/>
+          <circle cx="296" cy="50" r="21" fill="#ec4899" stroke="#23222b" stroke-width="2.5"/>
+          <circle cx="360" cy="48" r="21" fill="#8b5cf6" stroke="#23222b" stroke-width="2.5"/>
+          <circle cx="424" cy="50" r="21" fill="#fb923c" stroke="#23222b" stroke-width="2.5"/>
+          <circle cx="488" cy="57" r="21" fill="#0ea5e9" stroke="#23222b" stroke-width="2.5"/>
+          <circle cx="552" cy="69" r="21" fill="#84cc16" stroke="#23222b" stroke-width="2.5"/>
+          <circle cx="616" cy="87" r="21" fill="#14b8a6" stroke="#23222b" stroke-width="2.5"/>
+          <circle cx="680" cy="112" r="21" fill="#6366f1" stroke="#23222b" stroke-width="2.5"/>
+        </g>
+        <g font-family="Baloo 2, Nunito, sans-serif" font-size="21" font-weight="800" fill="#fff" text-anchor="middle">
+          <text x="40" y="120">P</text><text x="104" y="95">I</text><text x="168" y="77">C</text>
+          <text x="232" y="65">T</text><text x="296" y="58">I</text><text x="360" y="56">O</text>
+          <text x="424" y="58">N</text><text x="488" y="65">A</text><text x="552" y="77">R</text>
+          <text x="616" y="95">I</text><text x="680" y="120">O</text>
+        </g>
+        <text x="40" y="146" font-family="Nunito" font-size="10" font-weight="700" fill="#23222b" opacity="0.5" letter-spacing="1">−11°</text>
+        <text x="344" y="146" font-family="Nunito" font-size="10" font-weight="700" fill="#23222b" opacity="0.5" letter-spacing="1">0°</text>
+        <text x="656" y="146" font-family="Nunito" font-size="10" font-weight="700" fill="#23222b" opacity="0.5" letter-spacing="1">+11°</text>
+      </svg>
+
+      <div style="height: 3px; background: #23222b; opacity: 0.12; margin: 18px 0;"></div>
+
+      <div style="display: flex; gap: 26px;">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 9px;">
+          <div class="gp-caption">Reglas de la composición</div>
+          <div class="row"><b>Curva</b><span>los extremos bajan 55&nbsp;px y giran ±11°; la casilla central queda a 0</span></div>
+          <div class="row"><b>Color</b><span>un color de categoría por letra, sin repetir seguidos</span></div>
+          <div class="row"><b>Soporte</b><span>las casillas se apoyan en una isla pequeña, con palmera y roca</span></div>
+          <div class="row"><b>Cámara</b><span>la misma de <code>GameWorld</code>: FOV 26, casi isométrica</span></div>
+        </div>
+
+        <div style="width: 262px; background: #EFE4CE; border-radius: 8px; padding: 16px 18px;">
+          <div class="gp-caption" style="margin-bottom: 9px;">Por qué así</div>
+          <div style="font-size: 13px; line-height: 1.5;">
+            Una fuente 3D obligaría a meter un <code>typeface.json</code> y a mantener un estilo tipográfico
+            que no existe en el mundo. Con casillas, el título ya es del juego: se lee como el primer tramo
+            del tablero y reutiliza geometría, materiales y colores que ya están escritos.
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: auto; display: flex; gap: 10px; padding-top: 18px;">
+        <div style="background: #23222b; color: #FDF6E8; border-radius: 6px; padding: 7px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700;">Sin assets nuevos</div>
+        <div style="background: #23222b; color: #FDF6E8; border-radius: 6px; padding: 7px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700;">Gira lento en bucle</div>
+        <div style="background: #23222b; color: #FDF6E8; border-radius: 6px; padding: 7px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700;">Degrada a 2D si no hay WebGL</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

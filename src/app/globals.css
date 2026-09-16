@@ -106,7 +106,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), Nunito, 'Trebuchet MS', sans-serif;
 }
 
 /* --- UI de juego ---------------------------------------------------------
@@ -172,4 +172,219 @@ body {
 .gp-button:active {
   transform: translateY(4px);
   box-shadow: 0 0 0 rgba(35, 34, 43, 0.4);
+}
+
+/* --- Mundo, en CSS ---------------------------------------------------------
+   Los overlays del host y la pantalla del jugador pintan con los mismos
+   colores que las islas, para que la interfaz parezca parte del tablero y no
+   una capa pegada encima. Espejo de `src/components/world/palette.js`. */
+:root {
+  --w-ink: #23222b;
+  --w-paper: #fdf6e8;
+  --w-cream: #fbf3e2;
+  --w-gold: #f7c948;
+  --w-sky: #6fcdf2;
+  --w-sky-soft: #a6e1f7;
+  --w-sky-pale: #cdeeff;
+  --w-sea: #3fb8de;
+  --w-sea-deep: #1b8fc4;
+  --w-sea-shallow: #8fe5f0;
+  --w-sand: #f2dcb3;
+  --w-green: #2b9e57;
+  --w-red: #dc4b3e;
+}
+
+.gp-display {
+  font-family: var(--font-display), 'Baloo 2', Nunito, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* Casilla del tablero en DOM: anillo crema, disco de color y contenido blanco.
+   Misma anatomía que `PathTile` en el mundo 3D — es la pieza que enlaza los
+   dos lenguajes, y por eso la comparten host y móvil. */
+.gp-tile {
+  position: relative;
+  width: var(--tile, 64px);
+  height: calc(var(--tile, 64px) * 1.14);
+  flex: none;
+}
+.gp-tile i {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  display: block;
+}
+.gp-tile .base {
+  bottom: 0;
+  width: var(--tile, 64px);
+  height: calc(var(--tile, 64px) * 0.35);
+  background: var(--w-cream);
+  box-shadow: 0 3px 0 rgba(27, 55, 80, 0.22);
+}
+.gp-tile .rim {
+  bottom: calc(var(--tile, 64px) * 0.12);
+  width: calc(var(--tile, 64px) * 0.84);
+  height: calc(var(--tile, 64px) * 0.31);
+  filter: brightness(0.72);
+}
+.gp-tile .top {
+  bottom: calc(var(--tile, 64px) * 0.21);
+  width: calc(var(--tile, 64px) * 0.84);
+  height: calc(var(--tile, 64px) * 0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --- Dado ------------------------------------------------------------------
+   Cubo CSS con caras de arcilla y puntos, no cifras: un dado se lee de un
+   vistazo por el patrón, y una cifra obliga a leerla. Caras opuestas suman 7. */
+.gp-dice-box {
+  position: relative;
+  perspective: 800px;
+  width: var(--die, 120px);
+  height: var(--die, 120px);
+  flex: none;
+}
+
+/* La sombra va aparte y no como filter sobre el cubo: un filter sobre un
+   elemento con transform-style: preserve-3d lo aplana, y el dado se renderiza
+   de canto — seis caras convertidas en seis rayas. */
+.gp-dice-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--die, 120px) * -0.13);
+  width: calc(var(--die, 120px) * 0.8);
+  height: calc(var(--die, 120px) * 0.17);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(27, 55, 80, 0.26);
+  filter: blur(calc(var(--die, 120px) * 0.045));
+}
+.gp-dice {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.gp-dice .f {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  background: var(--w-cream);
+  border: 3px solid var(--w-ink);
+  border-radius: calc(var(--die, 120px) * 0.19);
+  padding: calc(var(--die, 120px) * 0.12);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+.gp-dice .f b {
+  width: calc(var(--die, 120px) * 0.16);
+  height: calc(var(--die, 120px) * 0.16);
+  border-radius: 50%;
+  background: var(--w-ink);
+  align-self: center;
+  justify-self: center;
+}
+.gp-dice .f1 { transform: translateZ(calc(var(--die, 120px) / 2)); }
+.gp-dice .f6 { transform: rotateY(180deg) translateZ(calc(var(--die, 120px) / 2)); }
+.gp-dice .f3 { transform: rotateY(90deg) translateZ(calc(var(--die, 120px) / 2)); }
+.gp-dice .f4 { transform: rotateY(-90deg) translateZ(calc(var(--die, 120px) / 2)); }
+.gp-dice .f2 { transform: rotateX(90deg) translateZ(calc(var(--die, 120px) / 2)); }
+.gp-dice .f5 { transform: rotateX(-90deg) translateZ(calc(var(--die, 120px) / 2)); }
+
+@keyframes gp-dice-tumble {
+  from { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+  to { transform: rotateX(720deg) rotateY(1080deg) rotateZ(360deg); }
+}
+.gp-dice--tumbling { animation: gp-dice-tumble 1.1s linear infinite; }
+
+@keyframes gp-dice-settle {
+  from { transform: rotateX(-430deg) rotateY(-620deg) rotateZ(-290deg); }
+  to { transform: var(--gp-dice-final); }
+}
+.gp-dice--settling {
+  animation: gp-dice-settle var(--gp-dice-dur, 1.9s) cubic-bezier(0.17, 0.82, 0.28, 1) both;
+}
+
+/* --- Movimiento ------------------------------------------------------------
+   Todo lo que invita a un gesto se mueve solo: un objeto quieto parece una
+   imagen, y uno que flota parece que se puede coger. */
+@keyframes gp-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+.gp-bob { animation: gp-bob 2s ease-in-out infinite; }
+
+@keyframes gp-rise {
+  0% { opacity: 0; transform: translateY(8px); }
+  35% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(-16px); }
+}
+
+@keyframes gp-press {
+  0%, 62% { transform: translateY(0) scale(1); }
+  76% { transform: translateY(7px) scale(0.93); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes gp-ripple {
+  0%, 60% { opacity: 0; transform: scale(0.55); }
+  78% { opacity: 0.75; }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+@keyframes gp-pop {
+  from { opacity: 0; transform: scale(0.88) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.gp-pop { animation: gp-pop 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.25) both; }
+
+@keyframes gp-tick {
+  from { opacity: 0; transform: scale(1.7); }
+  30% { opacity: 1; transform: scale(1); }
+  to { opacity: 0.85; transform: scale(0.94); }
+}
+.gp-tick { animation: gp-tick 1s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+
+@keyframes gp-alarm {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+.gp-alarm { animation: gp-alarm 0.75s ease-in-out infinite; }
+
+@keyframes gp-beat {
+  0%, 100% { transform: scale(1); }
+  42% { transform: scale(1.11); }
+}
+.gp-beat { animation: gp-beat 1s ease-in-out infinite; }
+
+@keyframes gp-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+.gp-shake { animation: gp-shake 0.4s ease-in-out; }
+
+/* Superficie que responde a un gesto: sin scroll, sin selección y sin el menú
+   largo de iOS, que son las tres cosas que rompen un arrastre en móvil. */
+.gp-grab {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gp-bob,
+  .gp-beat,
+  .gp-alarm,
+  .gp-dice--tumbling {
+    animation: none;
+  }
 }

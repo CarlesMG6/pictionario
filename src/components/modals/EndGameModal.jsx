@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { speciesFromIcon } from '../../game/animals';
-import { animalPortrait } from '../hud/animalPortrait';
+import { useAnimalPortraits } from '../hud/animalPortrait';
 import { teamColor } from '../hud/teamColors';
+import { Trophy } from '../ui/Glyphs';
 import Modal from './Modal';
 
 const ORDINALS = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º'];
@@ -12,13 +11,7 @@ const ORDINALS = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º'];
 export default function EndGameModal({ teams, winnerTeamId, ranking, roomCode }) {
   const router = useRouter();
 
-  const portraits = useMemo(
-    () =>
-      Object.fromEntries(
-        (teams || []).map((team) => [team.id, animalPortrait(speciesFromIcon(team.icon_url))]),
-      ),
-    [teams],
-  );
+  const portraits = useAnimalPortraits(teams);
 
   const winner = teams.find((t) => t.id === winnerTeamId);
   const rankingTeams = (ranking || []).map((id) => teams.find((t) => t.id === id)).filter(Boolean);
@@ -26,7 +19,10 @@ export default function EndGameModal({ teams, winnerTeamId, ranking, roomCode })
 
   return (
     <Modal className="min-w-[420px] px-10 py-8">
-      <div className="gp-caption">Fin de la partida</div>
+      <div className="flex items-center gap-2 text-[#e8a51c]">
+        <Trophy size={20} />
+        <span className="gp-caption text-[#23222b]">Fin de la partida</span>
+      </div>
 
       <div className="mt-3 flex flex-col items-center">
         {portraits[winnerTeamId] && (
@@ -57,17 +53,10 @@ export default function EndGameModal({ teams, winnerTeamId, ranking, roomCode })
         </div>
       </div>
 
-      <div className="mt-6 flex w-full gap-3">
+      <div className="mt-6 flex w-full">
         <button
           type="button"
-          className="gp-button flex-1 bg-[#fdf6e8] px-4 py-2 text-xs text-[#23222b]"
-          onClick={() => alert('Estadísticas próximamente')}
-        >
-          Estadísticas
-        </button>
-        <button
-          type="button"
-          className="gp-button flex-1 bg-[#f7c948] px-4 py-2 text-xs text-[#23222b]"
+          className="gp-button flex-1 bg-[#f7c948] px-4 py-3 text-xs text-[#23222b]"
           onClick={() => {
             // La pantalla de configuración se direcciona por código de sala, no
             // por el id interno del documento.

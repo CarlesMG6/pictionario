@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo } from 'react';
-import { speciesFromIcon } from '../../game/animals';
-import { animalPortrait } from './animalPortrait';
+import { useAnimalPortraits } from './animalPortrait';
 import { teamColor } from './teamColors';
 
 const ORDINALS = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º'];
@@ -11,13 +9,7 @@ const ORDINALS = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º'];
 // tarjeta y pisándola, y a su derecha la ficha con los datos. La del líder se
 // eleva y la del turno en curso se marca con una banda superior.
 export default function TeamsBar({ teams, currentTeamId, totalTiles }) {
-  const portraits = useMemo(
-    () =>
-      Object.fromEntries(
-        (teams || []).map((team) => [team.id, animalPortrait(speciesFromIcon(team.icon_url))]),
-      ),
-    [teams],
-  );
+  const portraits = useAnimalPortraits(teams);
 
   if (!teams || teams.length === 0) return null;
 
@@ -27,7 +19,7 @@ export default function TeamsBar({ teams, currentTeamId, totalTiles }) {
   const rankOf = (team) => sorted.findIndex((t) => (t.position || 0) === (team.position || 0)) + 1;
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-center gap-6 px-5 pb-5 pt-16">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-wrap items-end justify-center gap-6 px-5 pb-5 pt-16">
       {teams.map((team, index) => {
         const color = teamColor(index);
         const rank = rankOf(team);
@@ -38,7 +30,7 @@ export default function TeamsBar({ teams, currentTeamId, totalTiles }) {
           <div
             key={team.id}
             className={`relative flex items-end transition-transform duration-300 ${
-              rank === 1 ? '-translate-y-1.5' : ''
+              isTurn ? '-translate-y-3 scale-[1.06]' : rank === 1 ? '-translate-y-1.5' : ''
             }`}
           >
             {/* La figura vive fuera de la tarjeta y se apoya sobre su borde. */}
@@ -52,13 +44,19 @@ export default function TeamsBar({ teams, currentTeamId, totalTiles }) {
               )}
             </div>
 
-            <div className="gp-panel relative overflow-hidden pl-9 pr-4 pt-2.5 pb-2.5">
+            <div
+              className="gp-panel relative overflow-hidden pl-9 pr-4 pt-2.5 pb-2.5"
+              style={isTurn ? { boxShadow: `0 5px 0 rgba(35,34,43,0.4), 0 0 0 4px ${color}55` } : undefined}
+            >
               {/* Banda del color del equipo; se ilumina entera en su turno. */}
               <div
                 className="absolute inset-y-0 left-0 w-3 transition-all"
                 style={{ background: color }}
               />
-              {isTurn && <div className="absolute inset-x-0 top-0 h-1.5" style={{ background: color }} />}
+              {/* Turno en curso: banda completa arriba. Es la misma señal que
+                  da el peón iluminado en el mundo, para que no haya que buscar
+                  en dos sitios distintos de quién es el turno. */}
+              {isTurn && <div className="absolute inset-x-0 top-0 h-2" style={{ background: color }} />}
 
               <div className="flex items-center gap-5">
                 <div className="min-w-0">

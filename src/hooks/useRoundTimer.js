@@ -17,6 +17,9 @@ export function useRoundTimer(room_id, phase, roundTime) {
   const [countdown, setCountdown] = useState(3);
 
   const intervalRef = useRef();
+  // Espejo del temporizador para el tic: el descuento no puede vivir dentro del
+  // actualizador de estado, que React invoca dos veces en desarrollo.
+  const timerValueRef = useRef(null);
   const countdownRef = useRef();
   const lastBeepRef = useRef(null);
   const beepRef = useRef(null);
@@ -46,54 +49,57 @@ export function useRoundTimer(room_id, phase, roundTime) {
     if (timer === 0) play(alarmRef.current);
   }, [timer, phase]);
 
-  // Arranque: fija el tiempo y pasa la partida a 'timer_running'.
+  // Cuenta atrás previa (3, 2, 1) y arranque de la ronda. Van juntas a
+  // propósito: antes el arranque escribía 'timer_running' en Firestore en
+  // cuanto entraba la fase, así que el 3-2-1 no llegaba a verse nunca. Ahora la
+  // partida no avanza hasta que la cuenta llega a cero.
+  //
+  // El contador va en una variable local y no en el actualizador de estado
+  // porque dentro del actualizador no puede haber efectos: React lo invoca dos
+  // veces en desarrollo y se escribiría el cambio de fase por duplicado.
   useEffect(() => {
-    if (phase === 'timer_starts' && !running) {
-      setTimer(duration);
-      setRunning(true);
-      lastBeepRef.current = null;
-      updateDoc(doc(db, 'game_state', room_id), { current_phase: 'timer_running' });
-    }
-  }, [phase, duration]);
-
-  // Cuenta atrás previa (3, 2, 1).
-  useEffect(() => {
-    if (phase === 'timer_starts') {
-      setCountdown(3);
-      countdownRef.current = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev === 1) {
-            clearInterval(countdownRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
+    if (phase !== 'timer_starts') {
       setCountdown(3);
       clearInterval(countdownRef.current);
+      return undefined;
     }
+
+    let remaining = 3;
+    setCountdown(remaining);
+    setTimer(duration);
+    timerValueRef.current = duration;
+    lastBeepRef.current = null;
+
+    countdownRef.current = setInterval(() => {
+      remaining -= 1;
+      setCountdown(remaining);
+      if (remaining <= 0) {
+        clearInterval(countdownRef.current);
+        setRunning(true);
+        updateDoc(doc(db, 'game_state', room_id), { current_phase: 'timer_running' });
+      }
+    }, 1000);
+
     return () => clearInterval(countdownRef.current);
-  }, [phase]);
+  }, [phase, duration, room_id]);
 
   // Tic de la ronda.
   useEffect(() => {
-    if (phase === 'timer_running' && running && timer !== null && timer > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimer((prev) => {
-          if (prev === 1) {
-            clearInterval(intervalRef.current);
-            setRunning(false);
-            updateDoc(doc(db, 'game_state', room_id), { current_phase: 'timer_stopped' });
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(intervalRef.current);
-    }
+    if (phase !== 'timer_running' || !running) return () => clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      const next = Math.max(0, (timerValueRef.current ?? duration) - 1);
+      timerValueRef.current = next;
+      setTimer(next);
+      if (next === 0) {
+        clearInterval(intervalRef.current);
+        setRunning(false);
+        updateDoc(doc(db, 'game_state', room_id), { current_phase: 'timer_stopped' });
+      }
+    }, 1000);
+
     return () => clearInterval(intervalRef.current);
-  }, [phase, running, timer]);
+  }, [phase, running, duration, room_id]);
 
   // Fuera de las fases de temporizador, parar.
   useEffect(() => {

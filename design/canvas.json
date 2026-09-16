@@ -1,0 +1,86 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Portada",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Movil.dc.html",
+      "title": "Portada · móvil",
+      "x": 1560,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Sala.dc.html",
+      "title": "Crear sala",
+      "x": 0,
+      "y": 1020,
+      "w": 1440,
+      "h": 1240,
+      "is_interactive": true
+    },
+    {
+      "file": "Titulo3D.dc.html",
+      "title": "Título 3D",
+      "x": 1560,
+      "y": 1020,
+      "w": 1240,
+      "h": 820
+    },
+    {
+      "file": "Partida.dc.html",
+      "title": "Partida · host",
+      "x": 0,
+      "y": 2460,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "MovilPartida.dc.html",
+      "title": "Partida · móvil",
+      "x": 0,
+      "y": 3520,
+      "w": 1760,
+      "h": 980
+    }
+  ],
+  "annotations": [
+    {
+      "id": "direccion",
+      "x": 0,
+      "y": -150,
+      "w": 620,
+      "text": "Extiende el lenguaje que ya existe en globals.css (.gp-panel, .gp-button) y la paleta de arcilla del mundo 3D.\nEl título deja de ser texto y pasa a ser un tramo del tablero: una casilla por letra."
+    },
+    {
+      "id": "interactiva",
+      "x": 0,
+      "y": 2300,
+      "w": 620,
+      "text": "«Crear sala» tiene los controles vivos: duración, tiempo por ronda y dificultad responden al clic.\nLas categorías van estáticas, con una mezcla de activas y apagadas para enseñar los dos estados."
+    },
+    {
+      "id": "partida-host",
+      "x": 1560,
+      "y": 2520,
+      "w": 660,
+      "text": "La pantalla grande narra la fase: a quién esperamos, el reloj de la ronda o el dado. Nada de eso va ya en un modal con velo oscuro — debajo hay un mundo 3D a todo color y taparlo 45 segundos lo convertía en un fondo de pantalla.\nLa categoría en juego se enseña solo con su nombre: el icono y el color ya están en la casilla que el peón tiene debajo, en el propio tablero.\nEl dado es un modelo 3D con el acabado del mundo, y aquí se queda clavado en el centro con cámara cenital: la misma tirada que hace el móvil, vista desde arriba."
+    },
+    {
+      "id": "gestos-movil",
+      "x": 1860,
+      "y": 3580,
+      "w": 660,
+      "text": "Los gestos sustituyen a los botones que había, y ninguno lleva texto que lo explique:\n· la palabra se ve borrosa y se enfoca mientras se mantiene el dedo encima — al soltar se vuelve a tapar sola, así que nunca se queda destapada sobre la mesa. Cuando la ronda ya ha terminado basta un toque para dejarla a la vista;\n· arrastrar la carta a la derecha reparte una palabra nueva; a la izquierda vuelve a la anterior. En reposo no hay ninguna marca: el icono aparece desde transparente a medida que avanza el dedo;\n· el dado no tiene botón. Está ahí, flota, y se lanza con el dedo: sale en la dirección del gesto, bota y rueda hasta pararse.\n\nMientras se dibuja solo hay dos dianas, acierto y fallo. Antes había que parar el reloj primero y decidir después: el reloj se para porque ha pasado algo, no como paso aparte.\n\nLa carta está en todas las pantallas, pero solo la destapa quien va a dibujar: al equipo que no juega se le queda borrosa y sin el dedo del pictograma, porque a ese le toca adivinarla."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

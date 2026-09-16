@@ -1,49 +1,67 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseClient.js';
 import { GameLogic } from '../../../../utils/GameLogic';
-import { doc, onSnapshot } from 'firebase/firestore';
 import { pickWord, DEFAULT_DIFFICULTY } from '../../../../utils/CategoryWords';
-import { updateDoc } from 'firebase/firestore';
-import { FaArrowsRotate } from "react-icons/fa6";
+import { teamColor } from '../../../../components/hud/teamColors';
+import PlayerFrame from '../../../../components/play/PlayerFrame';
+import PlayerStage from '../../../../components/play/PlayerStage';
 
-export default function PlayPage({ params }) {
-  // Compatibilidad futura: unwrap params si es un Promise
-  const resolvedParams = typeof params?.then === 'function' ? React.use(params) : params;
-  const { room_id, team_id } = resolvedParams;
-  const [teams, setTeams] = useState([]);
-  const [gameState, setGameState] = useState(null);
-  const [showWord, setShowWord] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+const MAX_USED_WORDS = 400;
+const DEFAULT_ROUND_TIME = 45;
 
-  const handleSuccess = async () => {
-    if (!room_id) return;
-    setIsProcessing(true);
-    console.log('/play -> Acierto en la ronda');
-    await GameLogic.success(room_id);
-    setShowWord(false);
-    setIsProcessing(false);
-  };
-  const handleFail = async () => {
-    if (!room_id) return;
-    setIsProcessing(true);
-    console.log('/play -> Fallo en la ronda');
-    await GameLogic.fail(room_id);
-    setShowWord(false);
-    setIsProcessing(false);
-  };
+// Cuenta atrás local. El reloj lo lleva el host, pero el móvil no necesita
+// sincronizarse con él para enseñar los segundos: arranca cuando ve entrar la
+// fase, y el final autorizado sigue siendo el cambio de fase que escribe el
+// host. Así no hay desfases de reloj entre dispositivos que arreglar.
+function useCountdownFrom(active, from) {
+  const [value, setValue] = useState(from);
 
   useEffect(() => {
-    if (!room_id) return;
-    // Suscripción a game_state
-    const unsubState = onSnapshot(doc(db, 'game_state', room_id), (docSnap) => {
-      setGameState(docSnap.exists() ? docSnap.data() : null);
+    if (!active) {
+      setValue(from);
+      return undefined;
+    }
+    let remaining = from;
+    setValue(remaining);
+    const id = setInterval(() => {
+      remaining = Math.max(0, remaining - 1);
+      setValue(remaining);
+      if (remaining === 0) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [active, from]);
+
+  return value;
+}
+
+// El móvil solo trae los datos y ejecuta las acciones; la pantalla entera vive
+// en PlayerStage, que es puro y se puede revisar en /play-lab.
+export default function PlayPage({ params }) {
+  // Compatibilidad futura: unwrap params si es un Promise.
+  const resolvedParams = typeof params?.then === 'function' ? React.use(params) : params;
+  const { room_id, team_id } = resolvedParams;
+
+  const [teams, setTeams] = useState([]);
+  const [room, setRoom] = useState(null);
+  const [gameState, setGameState] = useState(null);
+  const [busy, setBusy] = useState(false);
+  // Palabras vistas en este turno, en orden. Solo la toca el móvil del turno,
+  // que es el único que puede cambiarla, así que no hace falta guardarla en
+  // Firestore: es historial de navegación, no estado de la partida.
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    if (!room_id) return undefined;
+    const unsubState = onSnapshot(doc(db, 'game_state', room_id), (snap) => {
+      setGameState(snap.exists() ? snap.data() : null);
     });
-    // Suscripción a equipos embebidos en la sala
-    const unsubRoom = onSnapshot(doc(db, 'rooms', room_id), (docSnap) => {
-      const data = docSnap.data();
+    const unsubRoom = onSnapshot(doc(db, 'rooms', room_id), (snap) => {
+      const data = snap.data();
       setTeams(Array.isArray(data?.teams) ? data.teams : []);
+      setRoom(data || null);
     });
     return () => {
       unsubState();
@@ -51,189 +69,109 @@ export default function PlayPage({ params }) {
     };
   }, [room_id]);
 
-  // Esperar a que los params estén listos
-  if (!room_id || !team_id) {
-    return <div className="flex items-center justify-center min-h-screen">Cargando...</div>;
-  }
+  const word = gameState?.current_word;
 
-  if (!gameState) {
-    return <div className="flex items-center justify-center min-h-screen">Cargando...</div>;
-  }
+  // Una palabra que no está en el historial es una palabra de otro turno: el
+  // historial empieza de cero con ella.
+  useEffect(() => {
+    if (!word) return;
+    setHistory((previous) => (previous.includes(word) ? previous : [word]));
+  }, [word]);
 
-  if (!gameState.is_active) {
-    return <div className="flex items-center justify-center min-h-screen">La partida ha terminado.</div>;
-  }
+  const phase = gameState?.current_phase;
+  const roundTime = typeof room?.round_time === 'number' ? room.round_time : DEFAULT_ROUND_TIME;
 
-  const currentTeam = teams.find(t => t.id === gameState.current_turn_team);
-  const isMyTurn = gameState.current_turn_team == team_id;
+  const myIndex = teams.findIndex((t) => t.id === team_id);
+  const turnIndex = teams.findIndex((t) => t.id === gameState?.current_turn_team);
+  const winnerIndex = teams.findIndex((t) => t.id === gameState?.winner_team);
 
-  // Lógica de UI según current_phase
-  if (gameState.current_phase === 'waiting') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <h1 className="text-6xl font-extrabold text-primary">Pictionario</h1>
-      </div>
-    );
-  }
+  const cursor = history.indexOf(word);
 
-  if (gameState.current_phase === 'dice') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-8">
-        {isMyTurn ? (
-          <button
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-4 rounded-xl text-2xl font-bold shadow-lg"
-            onClick={async () => {
-              setIsProcessing(true);
-              // Cambiar la fase a 'dice_rolling' en game_state
-              await import('firebase/firestore').then(({ updateDoc, doc }) =>
-                updateDoc(doc(db, 'game_state', room_id), { current_phase: 'dice_rolling' })
-              );
-              setIsProcessing(false);
-            }}
-            disabled={isProcessing}
-          >
-            🎲 Tirar dado
-          </button>
-        ) : (
-          <div className="text-xl text-muted-foreground">Esperando a que el equipo tire el dado...</div>
-        )}
-      </div>
-    );
-  }
+  const preCount = useCountdownFrom(phase === 'timer_starts', 3);
+  const roundLeft = useCountdownFrom(phase === 'timer_running', roundTime);
 
-  // Si NO es mi turno y estamos en play/timer_starts/timer_running/timer_stopped: solo palabra y ojo
-  if (!isMyTurn && ["play", "timer_starts", "timer_running", "timer_stopped"].includes(gameState.current_phase)) {
-    return (
-       <div className="flex flex-col items-center justify-center min-h-screen p-8 max-w-sm m-auto">
-        <WordWithEye showWord={showWord} setShowWord={setShowWord} isProcessing={isProcessing} gameState={gameState} isMyTurn={isMyTurn} currentTeam={currentTeam} />
-      </div>
-    );
-  }
+  const run = async (action) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await action();
+    } finally {
+      setBusy(false);
+    }
+  };
 
-  // Es mi turno y fase = play: palabra+ojo+empezar ronda + regenerar palabra
-  if (isMyTurn && gameState.current_phase === 'play') {
-    // Botón para regenerar palabra
-    const handleRegenerateWord = async () => {
-      if (!gameState.current_category) return;
-      const difficulty = gameState.difficulty || DEFAULT_DIFFICULTY;
-      // Respeta la dificultad de la partida y no repite lo ya jugado.
+  // Deslizar la carta: a la derecha reparte, a la izquierda deshace.
+  const slide = (direction) =>
+    run(async () => {
+      if (!gameState?.current_category) return;
+      const stateRef = doc(db, 'game_state', room_id);
+
+      if (direction === 'prev') {
+        if (cursor <= 0) return;
+        await updateDoc(stateRef, { current_word: history[cursor - 1] });
+        return;
+      }
+
+      // Si se había vuelto atrás, «siguiente» recupera lo que ya había delante
+      // en vez de sortear otra palabra.
+      if (cursor >= 0 && cursor < history.length - 1) {
+        await updateDoc(stateRef, { current_word: history[cursor + 1] });
+        return;
+      }
+
       const used = Array.isArray(gameState.used_words) ? gameState.used_words : [];
-      const newWord = pickWord(gameState.current_category, difficulty, used);
-      if (!newWord || newWord === gameState.current_word) return;
-      await updateDoc(doc(db, 'game_state', room_id), {
-        current_word: newWord,
-        used_words: [...used, newWord].slice(-400),
+      const next = pickWord(
+        gameState.current_category,
+        gameState.difficulty || DEFAULT_DIFFICULTY,
+        used,
+      );
+      if (!next || next === word) return;
+      setHistory((previous) => [...previous, next]);
+      await updateDoc(stateRef, {
+        current_word: next,
+        used_words: [...used, next].slice(-MAX_USED_WORDS),
       });
-    };
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-8 max-w-sm m-auto">
-        <WordWithEye showWord={showWord} setShowWord={setShowWord} isProcessing={isProcessing} gameState={gameState} isMyTurn={isMyTurn} currentTeam={currentTeam} />
-        <div className="flex gap-4 mt-6 w-full">
-          <button
-            className="px-6 py-3 bg-card rounded-lg text-lg font-bold hover:bg-card-hover"
-            onClick={handleRegenerateWord}
-            disabled={isProcessing}
-          >
-            <FaArrowsRotate />
-          </button>
-          <button
-            className="flex-1 px-6 py-3 bg-primary text-background rounded-lg text-lg font-bold hover:bg-primary-hover"
-            onClick={async () => {
-              setIsProcessing(true);
-              await GameLogic.startRound(room_id, team_id);
-              setIsProcessing(false);
-            }}
-            disabled={isProcessing}
-          >
-            Empezar
-          </button>
-        </div>
-      </div>
+    });
+
+  // Al lanzar se borra el valor anterior: así el dado del móvil sabe que tiene
+  // que seguir girando hasta que el host publique el nuevo.
+  const throwDice = () =>
+    run(() =>
+      updateDoc(doc(db, 'game_state', room_id), {
+        current_phase: 'dice_rolling',
+        dice_value: null,
+      }),
     );
-  }
 
-  // Es mi turno y fase = timer_starts o timer_running: palabra+ojo+parar temporizador
-  if (isMyTurn && ["timer_starts", "timer_running"].includes(gameState.current_phase)) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-8 max-w-sm m-auto">
-        <WordWithEye showWord={showWord} setShowWord={setShowWord} isProcessing={isProcessing} gameState={gameState} isMyTurn={isMyTurn} currentTeam={currentTeam} />
-        <div className="flex gap-4 mt-6 w-full">
-          <button
-          className="w-full mt-6 px-6 py-3 bg-red-600 text-white rounded-lg text-lg font-bold hover:bg-red-700"
-          onClick={async () => {
-            setIsProcessing(true);
-            await import('firebase/firestore').then(({ updateDoc, doc }) =>
-              updateDoc(doc(db, 'game_state', room_id), { current_phase: 'timer_stopped' })
-            );
-            setIsProcessing(false);
-          }}
-          disabled={isProcessing}
-        >
-          Parar temporizador
-        </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Es mi turno y fase = timer_stopped: palabra+ojo+acierto/fallo
-  if (isMyTurn && gameState.current_phase === 'timer_stopped') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-8 max-w-sm m-auto">
-        <WordWithEye showWord={showWord} setShowWord={setShowWord} isProcessing={isProcessing} gameState={gameState} isMyTurn={isMyTurn} currentTeam={currentTeam} />
-        <div className="flex gap-4 mt-6 w-full">
-          <button
-            className=" flex-1 bg-red-600 text-white px-6 py-3 rounded-lg text-lg font-bold hover:bg-red-700"
-            onClick={handleFail}
-            disabled={isProcessing}
-          >
-            ❌ Fallo
-          </button>
-          <button
-            className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg text-lg font-bold hover:bg-green-700"
-            onClick={handleSuccess}
-            disabled={isProcessing}
-          >
-            ✅ Acierto
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-}
-
-// Componente para mostrar la palabra y el botón de ojo
-function WordWithEye({ showWord, setShowWord, isProcessing, gameState, isMyTurn, currentTeam }) {
   return (
-    <div className="flex flex-col items-center gap-2 w-full">
-      <div className="mb-1 text-base text-gray-600 font-medium w-full">
-        {isMyTurn
-          ? <>¡Es tu turno! {gameState.all_play ? <span className="ml-2 text-green-600 font-bold">¡pero juegan todos los equipos!</span> : null}</>
-          : currentTeam
-            ? <>Es turno de <span className="font-bold text-blue-700">{currentTeam.name}</span>{gameState.all_play ? <span className="ml-2 text-green-600 font-bold">¡pero juegan todos los equipos!</span> : null}</>
-            : 'Es turno de otro equipo'}
-      </div>
-      <div className="flex flex-row gap-8 items-center w-full">
-        <div className="border border-border rounded-lg p-8 bg-card shadow text-2xl min-w-[220px] min-h-[80px] flex items-center justify-center flex-1">
-          {showWord
-            ? (gameState.current_word ? <span className="text-foreground">{gameState.current_word}</span> : <span className="italic text-muted-foreground">(Sin palabra)</span>)
-            : <span className="italic text-muted-foreground">Palabra oculta</span>}
-        </div>
-        <button
-          className="ml-4 p-2 bg-primary/10 rounded-full border border-border hover:bg-primary/20"
-          onClick={() => setShowWord((v) => !v)}
-          aria-label={showWord ? 'Ocultar palabra' : 'Mostrar palabra'}
-          disabled={isProcessing}
-        >
-          {showWord ? (
-            <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path className='stroke-primary stroke-2' d="M3 12s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="3" className='stroke-primary stroke-2'/></svg>
-          ) : (
-            <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path className='stroke-primary stroke-2' d="M3 12s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="3" className='stroke-primary fill-primary stroke-2'/></svg>
-          )}
-        </button>
-      </div>
-    </div>
+    <PlayerFrame
+      myTeam={myIndex >= 0 ? teams[myIndex] : null}
+      myColor={teamColor(Math.max(0, myIndex))}
+      turnColor={gameState ? teamColor(Math.max(0, turnIndex)) : '#23222b'}
+    >
+      <PlayerStage
+        phase={room_id && team_id && gameState ? phase : null}
+        word={word}
+        categoryKey={gameState?.current_category}
+        diceValue={gameState?.dice_value}
+        activeTeam={turnIndex >= 0 ? teams[turnIndex] : null}
+        turnColor={teamColor(Math.max(0, turnIndex))}
+        isMyTurn={Boolean(gameState) && gameState.current_turn_team === team_id}
+        allPlay={Boolean(gameState?.all_play)}
+        busy={busy}
+        canGoBack={cursor > 0}
+        seconds={phase === 'timer_stopped' ? 0 : roundLeft}
+        duration={roundTime}
+        preCount={preCount}
+        winner={winnerIndex >= 0 ? teams[winnerIndex] : null}
+        winnerColor={teamColor(Math.max(0, winnerIndex))}
+        place={(gameState?.ranking || []).indexOf(team_id) + 1}
+        onSlide={slide}
+        onStart={() => run(() => GameLogic.startRound(room_id, team_id))}
+        onSuccess={() => run(() => GameLogic.success(room_id))}
+        onFail={() => run(() => GameLogic.fail(room_id))}
+        onThrow={throwDice}
+      />
+    </PlayerFrame>
   );
 }

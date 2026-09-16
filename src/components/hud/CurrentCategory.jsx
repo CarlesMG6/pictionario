@@ -1,33 +1,29 @@
 "use client";
 
-import { CATEGORIES } from '../../utils/CategoryWords';
-import { readableOn } from './teamColors';
+import { FaPeopleArrows } from 'react-icons/fa';
+import { categoryOf } from '../../utils/CategoryWords';
 
-// Categoría en juego, arriba y centrada. Es el dato que más se mira desde lejos:
-// va en una placa del color de la categoría, con su icono a la izquierda.
+// Categoría en juego, arriba y centrada: es el dato que más se mira desde
+// lejos, y por eso va solo. El nombre y nada más — el icono y el disco de
+// color ya están en la casilla que el peón tiene debajo, en el propio tablero.
 export default function CurrentCategory({ categoryKey, allPlay }) {
-  const category = CATEGORIES.find((c) => c.key === categoryKey);
+  const category = categoryOf(categoryKey);
   if (!category) return null;
 
-  const Icon = category.icon;
-  const foreground = readableOn(category.color);
-
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center gap-2 p-5">
-      <div className="gp-panel flex items-stretch overflow-hidden p-0">
-        <div
-          className="flex items-center px-4"
-          style={{ background: category.color, color: foreground }}
-        >
-          {Icon && <Icon size={26} />}
-        </div>
-        <div className="flex items-center border-l-[3px] border-[#23222b] px-5 py-2.5">
-          <span className="gp-label text-xl">{category.label}</span>
-        </div>
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex flex-col items-center gap-2.5 p-5">
+      <div className="gp-panel flex items-center px-8 py-3.5">
+        <span className="gp-label text-xl leading-none">{category.label}</span>
       </div>
 
+      {/* «Todos juegan» cambia la regla de la ronda, así que no puede ser una
+          nota al pie: va en dorado y con el mismo icono que su casilla. */}
       {allPlay && (
-        <div className="gp-panel gp-label px-4 py-1 text-xs" style={{ background: '#f7c948' }}>
+        <div
+          className="gp-panel gp-label flex items-center gap-2 px-4 py-1.5 text-sm"
+          style={{ background: '#f7c948' }}
+        >
+          <FaPeopleArrows size={16} />
           Todos juegan
         </div>
       )}

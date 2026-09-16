@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from 'react';
 import {
   ACESFilmicToneMapping,
   AmbientLight,
@@ -10,6 +13,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import { buildAnimalGeometries } from '../world/AnimalFigure';
+import { speciesFromIcon } from '../../game/animals';
 
 // Retrato de la criatura para la barra de equipos. Se rinde una vez por especie
 // a un PNG y se cachea: el HUD es DOM, y montar un canvas 3D por jugador
@@ -62,4 +66,33 @@ export function animalPortrait(species) {
     cache.set(species, null);
     return null;
   }
+}
+
+// En el servidor no hay WebGL, así que el retrato solo puede existir después de
+// montar. Pedirlo durante el render dejaba el HTML del servidor con el PNG del
+// icono y el del cliente con el retrato: React lo detecta y avisa de que la
+// hidratación no cuadra. Con el efecto, el primer render coincide en los dos
+// lados y el retrato entra justo después.
+export function useAnimalPortrait(iconUrl) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    setUrl(animalPortrait(speciesFromIcon(iconUrl)));
+  }, [iconUrl]);
+  return url;
+}
+
+export function useAnimalPortraits(teams) {
+  const [portraits, setPortraits] = useState({});
+  const key = (teams || []).map((team) => team.id + ':' + team.icon_url).join('|');
+
+  useEffect(() => {
+    setPortraits(
+      Object.fromEntries(
+        (teams || []).map((team) => [team.id, animalPortrait(speciesFromIcon(team.icon_url))]),
+      ),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return portraits;
 }

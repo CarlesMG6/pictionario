@@ -42,6 +42,10 @@ export const CATEGORIES = [
 
 export const CATEGORY_COLORS = Object.fromEntries(CATEGORIES.map(cat => [cat.key, cat.color]));
 
+// Metadatos de una categoría por su clave. Devuelve null si no existe, que es
+// lo que pasa mientras la partida todavía no ha repartido casilla.
+export const categoryOf = (key) => CATEGORIES.find((cat) => cat.key === key) || null;
+
 export {
   WORDS_BY_LEVEL,
   LEVELS,

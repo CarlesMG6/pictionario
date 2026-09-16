@@ -12,12 +12,16 @@ export default function HelpPanel({ categories, onJoin }) {
   const inPlay = CATEGORIES.filter((c) => (categories || []).includes(c.key));
 
   return (
-    <div className="absolute bottom-5 right-5 flex flex-col items-end gap-3">
+    <div className="absolute bottom-5 right-5 z-40 flex flex-col items-end gap-3">
       {open && (
         <div className="gp-panel w-72 p-3">
           {inPlay.length > 0 && (
             <>
               <div className="gp-caption mb-2">Categorías de la partida</div>
+              {/* Aquí sí van el color y el icono, al contrario que en el rótulo
+                  de la categoría en juego: esta lista es la leyenda del tablero,
+                  y sin ellos no se puede emparejar un nombre con las casillas
+                  que se ven en el mapa. */}
               <div className="mb-3 flex flex-col gap-1">
                 {inPlay.map((category) => {
                   const Icon = category.icon;

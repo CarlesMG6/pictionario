@@ -6,7 +6,7 @@ import { db } from '../firebaseClient.js';
 import { pickWord, DEFAULT_DIFFICULTY } from '../utils/CategoryWords';
 import { GameLogic } from '../utils/GameLogic';
 
-const ROLL_ANIMATION_MS = 2200;
+export const ROLL_ANIMATION_MS = 2200;
 const RESULT_HOLD_MS = 3000;
 const MOVE_DELAY_MS = 1000;
 
@@ -65,6 +65,11 @@ export function useDiceRoll(room_id, phase, boardRef) {
         setValue(rolled);
         setRolling(true);
       }
+
+      // El resultado se publica nada más salir: el móvil que ha lanzado tiene
+      // el dado dando vueltas y lo necesita para pararlo sobre la misma cara
+      // que la pantalla grande. El resto del turno se escribe al final.
+      await updateDoc(stateRef, { dice_value: rolled });
 
       await wait(ROLL_ANIMATION_MS + RESULT_HOLD_MS);
       if (mountedRef.current) setRolling(false);
