@@ -31,6 +31,34 @@ export const SPECIES_BY_ICON = {
   unicorn: 'unicorn',
 };
 
+// Nombre de cada especie, en plural: es lo que se le propone al equipo como
+// nombre cuando elige criatura, así que tiene que leerse como un equipo («los
+// delfines») y no como un bicho suelto.
+export const SPECIES_LABEL = {
+  bird: 'Pájaros',
+  cat: 'Gatos',
+  crab: 'Cangrejos',
+  deer: 'Ciervos',
+  dolphin: 'Delfines',
+  dragon: 'Dragones',
+  elephant: 'Elefantes',
+  fish: 'Peces',
+  monkey: 'Monos',
+  otter: 'Nutrias',
+  shrimp: 'Gambas',
+  spaceCat: 'Gatos espaciales',
+  squid: 'Calamares',
+  unicorn: 'Unicornios',
+};
+
+// Las catorce criaturas entre las que se elige, en el orden en que se enseñan.
+// Sale del mapa de iconos para que no haya dos listas que mantener.
+export const ANIMAL_CHOICES = Object.entries(SPECIES_BY_ICON).map(([file, species]) => ({
+  species,
+  icon: `/player-icons/${file}2.png`,
+  label: SPECIES_LABEL[species],
+}));
+
 // Ojos, idénticos en casi todas: se componen con el resto de piezas.
 const eyes = (x, y, z, r = 0.055) => [
   { shape: 'ellipsoid', size: [r, r, r], at: [x, y, z], color: EYE, mirror: true },

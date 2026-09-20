@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebaseClient.js';
 import { buildBoard } from '../game/board';
 
@@ -39,14 +39,10 @@ export function useGameRoom(room_id) {
     };
   }, [room_id]);
 
-  // Al terminar la partida la sala deja de estar "jugando" para que el host
-  // pueda volver a configurarla.
-  const phase = gameState?.current_phase;
-  useEffect(() => {
-    if (phase === 'end' && room_id) {
-      updateDoc(doc(db, 'rooms', room_id), { playing: false });
-    }
-  }, [phase, room_id]);
+  // El final de la partida ya no saca a la sala de "jugando": la fase la manda
+  // `rooms.stage`, y es «nueva partida» —desde el móvil de P1 o desde la propia
+  // pantalla final— quien la devuelve a la configuración. Si esto la moviera
+  // solo, las dos pantallas se irían del marcador antes de que nadie lo lea.
 
   return { gameState, teams, board, boardRef, roomConfig };
 }

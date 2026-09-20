@@ -138,7 +138,7 @@ export default function PlayLabPage() {
               teams={TEAMS}
               winnerTeamId={gameState.winner_team}
               ranking={gameState.ranking}
-              roomCode="ABC123"
+              onNewGame={() => {}}
             />
           )}
         </div>
@@ -169,6 +169,8 @@ export default function PlayLabPage() {
               winnerColor={teamColor(0)}
               place={2}
               canGoBack
+              isLeader
+              onNewGame={() => {}}
               onSlide={() => {}}
               onStart={() => {}}
               onSuccess={() => {}}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
 import { useAnimalPortraits } from '../hud/animalPortrait';
 import { teamColor } from '../hud/teamColors';
 import { Trophy } from '../ui/Glyphs';
@@ -8,8 +7,7 @@ import Modal from './Modal';
 
 const ORDINALS = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º'];
 
-export default function EndGameModal({ teams, winnerTeamId, ranking, roomCode }) {
-  const router = useRouter();
+export default function EndGameModal({ teams, winnerTeamId, ranking, onNewGame }) {
 
   const portraits = useAnimalPortraits(teams);
 
@@ -57,12 +55,10 @@ export default function EndGameModal({ teams, winnerTeamId, ranking, roomCode })
         <button
           type="button"
           className="gp-button flex-1 bg-[#f7c948] px-4 py-3 text-xs text-[#23222b]"
-          onClick={() => {
-            // La pantalla de configuración se direcciona por código de sala, no
-            // por el id interno del documento.
-            if (roomCode) router.push(`/host/${roomCode}`);
-            else alert('No se pudo recuperar el código de la sala.');
-          }}
+          // Devolver la sala a la configuración es un cambio de fase, no una
+          // navegación: las dos pantallas siguen a `rooms.stage` y se mueven
+          // solas, aquí y en cada móvil.
+          onClick={onNewGame}
         >
           Nueva partida
         </button>

@@ -11,7 +11,7 @@ import TeamAvatar from './TeamAvatar';
 //    cuatro móviles iguales es la primera duda que aparece;
 //  - el fondo es el mismo cielo y el mismo mar de la pantalla grande, para que
 //    las dos pantallas se lean como un solo juego.
-export default function PlayerFrame({ myTeam, myColor, turnColor, inline = false, children }) {
+export default function PlayerFrame({ myTeam, myColor, turnColor, seatLabel = null, inline = false, children }) {
   return (
     <div
       className={`${inline ? 'absolute' : 'fixed'} inset-0 flex flex-col overflow-hidden`}
@@ -39,9 +39,9 @@ export default function PlayerFrame({ myTeam, myColor, turnColor, inline = false
         className="relative z-10 flex shrink-0 items-center gap-3 border-b-[3px] border-[#23222b] px-4 py-2.5"
         style={{ background: 'var(--w-paper)' }}
       >
-        <TeamAvatar team={myTeam} color={myColor} size={44} />
+        <TeamAvatar team={myTeam} color={myColor} size={44} label={seatLabel} />
         <span className="gp-label min-w-0 flex-1 truncate text-[0.95rem] text-[#23222b]">
-          {myTeam?.name || 'Equipo'}
+          {myTeam?.name || seatLabel || 'Equipo'}
         </span>
       </div>
 

@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { speciesFromIcon } from '../../../game/animals';
 import { seedFromString } from '../../../game/worldGenerator';
 import { teamColor } from '../../../components/hud/teamColors';
 import { useGameRoom } from '../../../hooks/useGameRoom';
+import { GameLogic } from '../../../utils/GameLogic';
+import { STAGES } from '../../../utils/RoomLogic';
 import { useRoundTimer } from '../../../hooks/useRoundTimer';
 import { useDiceRoll } from '../../../hooks/useDiceRoll';
 import CurrentCategory from '../../../components/hud/CurrentCategory';
@@ -23,8 +26,19 @@ export default function HostPlayPage({ params }) {
   const resolvedParams = typeof params?.then === 'function' ? React.use(params) : params;
   const { room_id } = resolvedParams;
 
+  const router = useRouter();
   const { gameState, teams, board, boardRef, roomConfig } = useGameRoom(room_id);
   const phase = gameState?.current_phase;
+
+  // La sala puede salir de la partida desde cualquier móvil —«nueva partida» la
+  // devuelve a la configuración—, así que la pantalla grande sigue a `stage` en
+  // vez de esperar a que alguien la lleve de vuelta.
+  const stage = roomConfig?.stage;
+  useEffect(() => {
+    if (stage && stage !== STAGES.PLAYING && roomConfig?.code) {
+      router.replace(`/host/${roomConfig.code}`);
+    }
+  }, [stage, roomConfig?.code, router]);
 
   const dice = useDiceRoll(room_id, phase, boardRef);
   const round = useRoundTimer(room_id, phase, roomConfig?.round_time);
@@ -86,7 +100,7 @@ export default function HostPlayPage({ params }) {
           teams={teams}
           winnerTeamId={gameState?.winner_team}
           ranking={gameState?.ranking}
-          roomCode={roomConfig?.code}
+          onNewGame={() => GameLogic.backToSetup(room_id)}
         />
       )}
 

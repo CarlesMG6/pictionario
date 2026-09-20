@@ -76,11 +76,13 @@ export default function PlayerStage({
   winner = null,
   winnerColor = '#ef4444',
   place = 0,
+  isLeader = false,
   onSlide,
   onStart,
   onSuccess,
   onFail,
   onThrow,
+  onNewGame,
 }) {
   // Con «todos juegan» dibujan todos los equipos a la vez, así que todos
   // necesitan la palabra durante la ronda.
@@ -104,6 +106,20 @@ export default function PlayerStage({
           <div className="gp-panel px-6 py-2">
             <span className="gp-number text-3xl text-[#23222b]">{place}º</span>
           </div>
+        )}
+        {/* Volver a jugar lo decide quien lleva los mandos, igual que en la
+            sala: si cualquiera pudiera, un dedo despistado borraría el marcador
+            que la mesa está mirando. */}
+        {isLeader && onNewGame && (
+          <button
+            type="button"
+            onClick={onNewGame}
+            disabled={busy}
+            className="gp-button w-full py-4 text-base disabled:opacity-70"
+            style={{ background: 'var(--w-gold)', color: 'var(--w-ink)' }}
+          >
+            Nueva partida
+          </button>
         )}
       </div>,
     );

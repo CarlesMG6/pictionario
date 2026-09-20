@@ -1,11 +1,15 @@
 "use client";
 
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
-import Image from "next/image";
+import { useEffect, useRef, useState } from 'react';
+import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebaseClient.js';
 import { WORLD_VERSION } from '../game/worldGenerator';
-import { collection, addDoc, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy, serverTimestamp } from 'firebase/firestore';
+import { DEFAULT_CONFIG, STAGES } from '../utils/RoomLogic';
+
+// El título vive dentro del mundo 3D, así que el canvas solo existe en cliente.
+const TitleWorld = dynamic(() => import('../components/world/TitleWorld'), { ssr: false });
 
 function generateRoomId() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -18,147 +22,167 @@ function generateRoomId() {
 
 export default function Home() {
   const router = useRouter();
-  const [showModal, setShowModal] = useState(false);
+  const [showJoin, setShowJoin] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   const inputRef = useRef(null);
 
+  useEffect(() => {
+    if (showJoin) inputRef.current?.focus();
+  }, [showJoin]);
+
+  // El 404 manda aquí a quien ha tecleado mal un código de sala, y lo que quiere
+  // es volver a teclearlo: llega con el cuadro ya abierto.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('unirme')) {
+      setShowJoin(true);
+    }
+  }, []);
+
   const handleCreateRoom = async () => {
-    const code = generateRoomId();
-    // Crear sala con id autogenerado y campos code, createdAt, playing: false
-    const docRef = await addDoc(collection(db, 'rooms'), {
-      code,
-      createdAt: serverTimestamp(),
-      playing: false,
-      teams: [],
-      // El mundo 3D se genera a partir de esta semilla. Se fija al crear la sala
-      // para que tocar el generador no le cambie el mapa a una partida en curso.
-      world_seed: Math.floor(Math.random() * 1e9),
-      world_version: WORLD_VERSION,
-    });
-    router.push(`/host/${code}`);
+    if (busy) return;
+    setBusy(true);
+    try {
+      const code = generateRoomId();
+      await addDoc(collection(db, 'rooms'), {
+        code,
+        createdAt: serverTimestamp(),
+        playing: false,
+        // La sala nace configurada y en la primera fase: la pantalla grande
+        // tiene así tablero que enseñar desde el primer segundo, y los ajustes
+        // los cambia después el móvil de P1.
+        stage: STAGES.LOBBY,
+        ...DEFAULT_CONFIG,
+        teams: [],
+        // El mundo 3D se genera a partir de esta semilla. Se fija al crear la sala
+        // para que tocar el generador no le cambie el mapa a una partida en curso.
+        world_seed: Math.floor(Math.random() * 1e9),
+        world_version: WORLD_VERSION,
+      });
+      router.push(`/host/${code}`);
+    } catch {
+      setBusy(false);
+      setError('No se ha podido crear la sala. Inténtalo otra vez.');
+    }
   };
 
   const handleJoinRoom = async () => {
-    if (!/^[a-zA-Z0-9]{6}$/.test(joinCode)) {
-      setError('Introduce un código válido de 6 caracteres.');
+    const code = joinCode.trim().toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(code)) {
+      setError('El código son 6 letras o números.');
       return;
     }
-    // Buscar la sala por el campo code en Firestore
-    const q = query(collection(db, 'rooms'), where('code', '==', joinCode));
-    const querySnapshot = await getDocs(q);
-    if (querySnapshot.empty) {
-      setError('No existe ninguna sala con ese código.');
-      setTimeout(() => {
-        setShowModal(false);
-        setError('');
-        router.push('/');
-      }, 1500);
+    const snap = await getDocs(query(collection(db, 'rooms'), where('code', '==', code)));
+    if (snap.empty) {
+      setError('No hay ninguna sala con ese código.');
       return;
     }
     setError('');
-    setShowModal(false);
-    router.push(`/join/${joinCode}`);
+    setShowJoin(false);
+    router.push(`/join/${code}`);
   };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)] bg-background text-foreground">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+    <div className="fixed inset-0 overflow-hidden" style={{ background: 'var(--w-sky)' }}>
+      <TitleWorld />
 
-        <div className="text-7xl text-primary font-bold tracking-tighter font-sans" style={{ fontFamily: 'Inter, Arial, sans-serif' }}>
-          Pictionario
-        </div>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
+      {/* Todo lo de abajo flota sobre el mundo: el título ya está dentro de él. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-7 px-6 pb-10 pt-24">
+        <div className="pointer-events-auto flex w-full max-w-md flex-col gap-3.5 sm:max-w-none sm:flex-row sm:justify-center">
           <button
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-primary text-primary-foreground gap-2 hover:bg-primary-hover hover:text-primary-foreground font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
+            type="button"
             onClick={handleCreateRoom}
-            type="button"
+            disabled={busy}
+            className="gp-button px-11 py-5 text-lg disabled:opacity-70 sm:text-xl"
+            style={{ background: 'var(--w-gold)', color: 'var(--w-ink)' }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Crear Sala
+            {busy ? 'Creando…' : 'Crear sala'}
           </button>
           <button
-            className="rounded-full border border-solid border-border transition-colors flex items-center justify-center hover:bg-muted hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px] bg-background text-foreground"
-            onClick={() => setShowModal(true)}
             type="button"
+            onClick={() => { setShowJoin(true); setError(''); }}
+            className="gp-button px-11 py-5 text-lg sm:text-xl"
+            style={{ background: 'var(--w-paper)', color: 'var(--w-ink)' }}
           >
-            Unirme a Sala
+            Unirme a una sala
           </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://pictionario.vercel.app/rules"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Normas del juego
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://carlesmoyaguerrero.com"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          About me
-        </a>
-      </footer>
 
-      {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-foreground/40 z-50">
-          <div className="bg-background rounded-xl shadow-lg p-6 min-w-[320px] flex flex-col gap-4">
-            <h2 className="text-lg font-semibold mb-2 text-foreground">Unirse a una sala</h2>
+        <div className="pointer-events-auto flex gap-2.5">
+          <FooterLink href="/rules">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 4h11l3 3v13H5z" /><path d="M9 10h6M9 14h6" />
+            </svg>
+            Normas
+          </FooterLink>
+          <FooterLink href="https://carlesmoyaguerrero.com" external>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="8" /><path d="M4 12h16M12 4c2.5 2.6 2.5 12.4 0 16M12 4c-2.5 2.6-2.5 12.4 0 16" />
+            </svg>
+            Sobre mí
+          </FooterLink>
+        </div>
+      </div>
+
+      {showJoin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-6 backdrop-blur-sm">
+          <div className="gp-panel flex w-full max-w-sm flex-col gap-5 p-7">
+            <div>
+              <div className="gp-caption">Unirse a una sala</div>
+              <div className="gp-label mt-1 text-lg">Introduce el código</div>
+            </div>
+
             <input
               ref={inputRef}
-              className="border border-border rounded-xl px-3 py-2 text-base outline-none focus:ring-2 focus:ring-ring"
-              placeholder="Código de sala (6 caracteres)"
-              maxLength={6}
               value={joinCode}
-              onChange={e => setJoinCode(e.target.value)}
-              autoFocus
+              onChange={(e) => { setJoinCode(e.target.value.toUpperCase().slice(0, 6)); setError(''); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleJoinRoom(); }}
+              maxLength={6}
+              placeholder="ABC123"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              className="gp-display w-full rounded-lg border-[3px] text-center text-4xl tracking-[0.18em] outline-none"
+              style={{ borderColor: 'var(--w-ink)', background: '#fff', color: 'var(--w-ink)', padding: '14px 12px' }}
             />
-            {error && <span className="text-destructive text-sm">{error}</span>}
-            <div className="flex gap-2 justify-end">
+
+            {error && <div className="gp-label text-center text-sm" style={{ color: 'var(--w-red)' }}>{error}</div>}
+
+            <div className="flex gap-3">
               <button
-                className="px-4 py-2 rounded-xl bg-muted hover:bg-muted-hover text-foreground"
-                onClick={() => { setShowModal(false); setError(''); }}
                 type="button"
+                onClick={() => { setShowJoin(false); setError(''); }}
+                className="gp-button flex-1 py-3.5"
+                style={{ background: '#fff', color: 'var(--w-ink)' }}
               >
                 Cancelar
               </button>
               <button
-                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground"
-                onClick={handleJoinRoom}
                 type="button"
+                onClick={handleJoinRoom}
+                className="gp-button flex-1 py-3.5"
+                style={{ background: 'var(--w-gold)', color: 'var(--w-ink)' }}
               >
-                Unirme
+                Entrar
               </button>
             </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function FooterLink({ href, external = false, children }) {
+  return (
+    <a
+      href={href}
+      {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      className="gp-button flex items-center gap-2 px-4 py-3 text-[0.72rem] no-underline"
+      style={{ background: 'var(--w-paper)', color: 'var(--w-ink)' }}
+    >
+      {children}
+    </a>
   );
 }

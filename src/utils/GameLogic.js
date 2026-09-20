@@ -2,6 +2,8 @@ import { db } from '../firebaseClient.js';
 import { collection, getDoc, doc, setDoc, getDocs, query, where, onSnapshot, updateDoc, orderBy } from 'firebase/firestore';
 import { pickWord, DEFAULT_DIFFICULTY } from './CategoryWords';
 import { buildBoard } from '../game/board';
+import { ANIMAL_CHOICES } from '../game/animals';
+import { STAGES, configOf, seatLabel } from './RoomLogic';
 
 // Las palabras ya jugadas se guardan en game_state.used_words para no repetir
 // dentro de la misma partida. Se recorta para no engordar el documento.
@@ -43,6 +45,82 @@ async function checkAndEndGameIfNeeded(room_id) {
 }
 
 export class GameLogic {
+    // Empezar la partida. La lanza el móvil de P1, no la pantalla grande: la
+    // configuración ya está escrita en la sala —P1 la ha ido guardando según la
+    // tocaba— así que aquí solo se cierra el reparto y se crea el estado.
+    //
+    // El estado de juego se escribe antes que la fase de la sala: las dos
+    // pantallas saltan en cuanto ven `stage: 'playing'`, y si llegaran a la
+    // partida antes que el estado se encontrarían el tablero sin palabra.
+    static async startGame(room_id) {
+        const roomSnap = await getDoc(doc(db, 'rooms', room_id));
+        const room = roomSnap.data();
+        if (!room) return false;
+
+        const config = configOf(room);
+        const seats = Array.isArray(room.teams) ? room.teams : [];
+        if (seats.length < 2) return false;
+
+        // Quien no haya elegido criatura entra igual con una libre: su teléfono
+        // está en la mesa, y dejarlo fuera por no haber tocado la rejilla sería
+        // peor que jugar con un nombre puesto por la casa.
+        const taken = new Set(seats.map((seat) => seat.icon_url).filter(Boolean));
+        const teams = seats.map((seat, index) => {
+            let icon = seat.icon_url;
+            if (!icon) {
+                icon = (ANIMAL_CHOICES.find((choice) => !taken.has(choice.icon)) || ANIMAL_CHOICES[0]).icon;
+                taken.add(icon);
+            }
+            const label = ANIMAL_CHOICES.find((choice) => choice.icon === icon)?.label;
+            return {
+                ...seat,
+                position: 0,
+                ready: true,
+                icon_url: icon,
+                name: seat.name || label || seatLabel(index),
+            };
+        });
+
+        const firstTeamId = teams[Math.floor(Math.random() * teams.length)].id;
+        const category = config.categories[Math.floor(Math.random() * config.categories.length)];
+        const word = pickWord(category, config.difficulty);
+
+        await setDoc(doc(db, 'game_state', room_id), {
+            room_id,
+            current_turn_team: firstTeamId,
+            current_phase: 'play',
+            current_word: word,
+            current_category: category,
+            all_play: GameLogic.shouldAllPlay(category),
+            difficulty: config.difficulty,
+            used_words: word ? [word] : [],
+            dice_value: null,
+            is_active: true,
+        });
+
+        await updateDoc(doc(db, 'rooms', room_id), {
+            ...config,
+            teams,
+            stage: STAGES.PLAYING,
+            playing: true,
+        });
+
+        return true;
+    }
+
+    // «Nueva partida»: la sala vuelve a la configuración con los mismos equipos
+    // —criatura y nombre incluidos— y las fichas otra vez en la salida.
+    static async backToSetup(room_id) {
+        const roomSnap = await getDoc(doc(db, 'rooms', room_id));
+        const teams = (Array.isArray(roomSnap.data()?.teams) ? roomSnap.data().teams : [])
+            .map((team) => ({ ...team, position: 0 }));
+        await updateDoc(doc(db, 'rooms', room_id), {
+            teams,
+            stage: STAGES.SETUP,
+            playing: false,
+        });
+    }
+
     // SUCCESS: El equipo mantiene el turno y se le asigna una nueva palabra
     static async success(room_id) {
         // Comprobar si el equipo ha llegado al final

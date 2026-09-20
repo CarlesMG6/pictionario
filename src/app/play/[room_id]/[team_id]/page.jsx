@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseClient.js';
 import { GameLogic } from '../../../../utils/GameLogic';
 import { pickWord, DEFAULT_DIFFICULTY } from '../../../../utils/CategoryWords';
+import { STAGES, isLeader, rememberSeat } from '../../../../utils/RoomLogic';
 import { teamColor } from '../../../../components/hud/teamColors';
 import PlayerFrame from '../../../../components/play/PlayerFrame';
 import PlayerStage from '../../../../components/play/PlayerStage';
@@ -43,6 +45,7 @@ export default function PlayPage({ params }) {
   // Compatibilidad futura: unwrap params si es un Promise.
   const resolvedParams = typeof params?.then === 'function' ? React.use(params) : params;
   const { room_id, team_id } = resolvedParams;
+  const router = useRouter();
 
   const [teams, setTeams] = useState([]);
   const [room, setRoom] = useState(null);
@@ -68,6 +71,18 @@ export default function PlayPage({ params }) {
       unsubRoom();
     };
   }, [room_id]);
+
+  // Si la sala vuelve a la configuración —«nueva partida»— este teléfono vuelve
+  // a ser el mando de la sala, no el de la partida.
+  const stage = room?.stage;
+  useEffect(() => {
+    if (stage && stage !== STAGES.PLAYING && room?.code) {
+      // Se vuelve al mismo equipo con el que se estaba jugando, pase lo que
+      // pase con lo que hubiera guardado el navegador.
+      rememberSeat(room_id, team_id);
+      router.replace(`/join/${room.code}`);
+    }
+  }, [stage, room?.code, room_id, team_id, router]);
 
   const word = gameState?.current_word;
 
@@ -166,6 +181,8 @@ export default function PlayPage({ params }) {
         winner={winnerIndex >= 0 ? teams[winnerIndex] : null}
         winnerColor={teamColor(Math.max(0, winnerIndex))}
         place={(gameState?.ranking || []).indexOf(team_id) + 1}
+        isLeader={isLeader(teams, team_id)}
+        onNewGame={() => run(() => GameLogic.backToSetup(room_id))}
         onSlide={slide}
         onStart={() => run(() => GameLogic.startRound(room_id, team_id))}
         onSuccess={() => run(() => GameLogic.success(room_id))}
