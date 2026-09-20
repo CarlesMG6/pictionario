@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:ital,wght@0,600;0,700;0,800;1,800;1,900&display=swap">
+  <style>
+    body { margin: 0; font-family: Nunito, 'Trebuchet MS', sans-serif; color: #23222b; }
+
+    .gp-panel { background: #FDF6E8; border: 3px solid #23222b; border-radius: 8px;
+      box-shadow: 0 5px 0 rgba(35, 34, 43, 0.4); }
+    .gp-label { text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; }
+    .gp-caption { text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+      font-size: 11px; opacity: 0.62; }
+    .gp-number { font-style: italic; font-weight: 900; letter-spacing: -0.03em; }
+    .gp-display { font-family: 'Baloo 2', Nunito, sans-serif; font-weight: 800; }
+    .gp-button { border: 3px solid #23222b; border-radius: 8px;
+      box-shadow: 0 4px 0 rgba(35, 34, 43, 0.4); text-transform: uppercase;
+      letter-spacing: 0.08em; font-weight: 800; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      padding: 15px 0; font-size: 14px; }
+
+    /* Las tres pantallas de cuando algo no sale: mismo marco que el móvil de la
+       partida, para que un tropiezo no parezca que te ha echado del juego. */
+    .phone {
+      position: relative; width: 390px; height: 780px; flex: none;
+      border: 3px solid #23222b; border-radius: 30px; overflow: hidden;
+      background: linear-gradient(180deg, #6FCDF2 0%, #A6E1F7 46%, #CDEEFF 74%);
+      box-shadow: 0 6px 0 rgba(35,34,43,0.35);
+    }
+    .phone .sea { position: absolute; left: 0; right: 0; bottom: 0; height: 26%;
+      background: linear-gradient(180deg, rgba(143,229,240,0) 0%, #8FE5F0 26%, #3FB8DE 62%, #1B8FC4 100%); }
+    .stage { position: relative; height: 100%; box-sizing: border-box;
+      padding: 40px 24px 28px 24px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 26px; }
+    .card { width: 100%; padding: 26px 22px; display: flex; flex-direction: column;
+      align-items: center; gap: 14px; text-align: center; }
+    .card p { margin: 0; font-size: 14px; line-height: 1.45; font-weight: 600; opacity: 0.75; }
+    .actions { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1290px; height: 980px; background: #EAF7FF; padding: 40px; box-sizing: border-box;">
+  <div style="display: flex; gap: 40px;">
+
+    <!-- 1 · RUTA QUE NO EXISTE (not-found.jsx) ----------------------------- -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="gp-caption">404 · una dirección que no lleva a ningún sitio</div>
+      <div class="phone">
+        <div class="sea"></div>
+        <div class="stage">
+
+          <!-- Un islote con un poste de señales que no apunta a nada: dice
+               «te has salido del mapa» sin tener que explicarlo. -->
+          <svg viewBox="0 0 260 180" style="width: 250px;">
+            <ellipse cx="130" cy="150" rx="106" ry="24" fill="#1B8FC4" opacity="0.3"/>
+            <path d="M30 142 C30 124 64 112 104 109 C146 106 190 113 218 121 C238 127 246 136 240 143 C231 154 186 158 130 158 C74 158 30 154 30 142 Z" fill="#DEC195"/>
+            <path d="M40 136 C40 120 70 110 106 107 C144 104 184 111 209 118 C227 123 234 131 229 137 C221 147 180 151 130 151 C80 151 40 147 40 136 Z" fill="#F2DCB3"/>
+            <path d="M126 118 L126 42" stroke="#7A4E33" stroke-width="9" stroke-linecap="round"/>
+            <path d="M126 56 L74 56 L62 68 L74 80 L126 80 Z" fill="#A9714B" stroke="#23222b" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M128 88 L186 88 L198 100 L186 112 L128 112 Z" fill="#C08C5E" stroke="#23222b" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M84 62 h30 M146 94 h34" stroke="#FDF6E8" stroke-width="5" stroke-linecap="round" opacity="0.8"/>
+            <path d="M58 132 C68 122 88 120 98 124 C86 130 70 132 58 132 Z" fill="#3F9E58"/>
+          </svg>
+
+          <div class="gp-panel card">
+            <div class="gp-label" style="font-size: 18px;">Esto no está en el mapa</div>
+            <p>La dirección no existe o la sala se ha terminado hace rato.</p>
+          </div>
+
+          <div class="actions">
+            <div class="gp-button" style="background: #f7c948; color: #23222b;">Ir a la portada</div>
+            <div class="gp-button" style="background: #FDF6E8; color: #23222b;">Entrar con un código</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 · ALGO HA FALLADO (error.jsx) ------------------------------------ -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="gp-caption">Error · la pantalla se ha caído sola</div>
+      <div class="phone">
+        <div class="sea"></div>
+        <div class="stage">
+
+          <!-- Una casilla del camino, rajada. Es la pieza más reconocible del
+               juego: rota se entiende sin leer que algo se ha partido. -->
+          <svg viewBox="0 0 260 180" style="width: 240px;">
+            <ellipse cx="130" cy="150" rx="96" ry="22" fill="#1B8FC4" opacity="0.26"/>
+            <g transform="rotate(-6 130 116)">
+              <ellipse cx="130" cy="132" rx="66" ry="21" fill="#FBF3E2"/>
+              <path d="M64 132 A66 21 0 0 0 196 132 L196 120 A66 21 0 0 1 64 120 Z" fill="#E7DAC0"/>
+              <ellipse cx="130" cy="120" rx="66" ry="21" fill="#FBF3E2"/>
+              <path d="M74 106 A56 18 0 0 0 186 106 L186 96 A56 18 0 0 1 74 96 Z" fill="#b23a30"/>
+              <ellipse cx="130" cy="96" rx="56" ry="18" fill="#dc4b3e"/>
+              <!-- La raja: cruza el disco y se lleva una esquirla por delante -->
+              <path d="M84 92 L108 98 L98 86 L124 96 L116 84 L142 96 L134 86 L160 98 L150 88 L176 100"
+                    stroke="#23222b" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+            </g>
+            <g transform="rotate(24 214 138)">
+              <ellipse cx="214" cy="138" rx="17" ry="6" fill="#FBF3E2"/>
+              <ellipse cx="214" cy="132" rx="14" ry="5" fill="#dc4b3e"/>
+            </g>
+            <path d="M126 54 l-9 24 l14 -4 l-11 26" stroke="#23222b" stroke-width="5" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+          </svg>
+
+          <div class="gp-panel card">
+            <div class="gp-label" style="font-size: 18px;">Se ha roto una casilla</div>
+            <p>Algo ha fallado en esta pantalla. La partida sigue en la sala: se puede volver a entrar.</p>
+          </div>
+
+          <div class="actions">
+            <div class="gp-button" style="background: #f7c948; color: #23222b;">Reintentar</div>
+            <div class="gp-button" style="background: #FDF6E8; color: #23222b;">Ir a la portada</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 · YA EXISTE: los avisos de la sala, como referencia de familia ---- -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="gp-caption">Ya en el juego · avisos de la sala</div>
+      <div class="phone">
+        <div class="sea"></div>
+        <div class="stage">
+
+          <svg viewBox="0 0 260 180" style="width: 230px;">
+            <ellipse cx="130" cy="150" rx="100" ry="23" fill="#1B8FC4" opacity="0.3"/>
+            <path d="M34 140 C34 122 68 110 106 107 C148 104 190 111 218 119 C238 125 246 134 240 141 C231 152 186 156 130 156 C74 156 34 152 34 140 Z" fill="#F2DCB3"/>
+            <g>
+              <rect x="86" y="56" width="88" height="62" rx="8" fill="#FDF6E8" stroke="#23222b" stroke-width="4"/>
+              <path d="M104 78 h52 M104 94 h34" stroke="#23222b" stroke-width="5" stroke-linecap="round" opacity="0.35"/>
+            </g>
+            <circle cx="170" cy="58" r="17" fill="#dc4b3e" stroke="#23222b" stroke-width="4"/>
+            <path d="M170 50 v10 M170 66 v1.5" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+
+          <div class="gp-panel card">
+            <div class="gp-label" style="font-size: 18px;">La sala está llena</div>
+            <p>Caben ocho equipos.</p>
+          </div>
+
+          <div class="actions">
+            <div class="gp-button" style="background: #f7c948; color: #23222b;">Volver</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="gp-caption" style="text-align: center; line-height: 1.6; width: 390px;">
+        Mismo molde para «no hay ninguna sala con ese código»,<br>«te has quedado fuera» y «esa sala ya no existe»
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

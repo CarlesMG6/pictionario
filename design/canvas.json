@@ -48,6 +48,30 @@
       "y": 3520,
       "w": 1760,
       "h": 980
+    },
+    {
+      "file": "Normas.dc.html",
+      "title": "Normas",
+      "x": 0,
+      "y": 4620,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "NormasMovil.dc.html",
+      "title": "Normas · móvil",
+      "x": 1560,
+      "y": 4620,
+      "w": 390,
+      "h": 1480
+    },
+    {
+      "file": "Perdido.dc.html",
+      "title": "Perdido",
+      "x": 0,
+      "y": 5860,
+      "w": 1290,
+      "h": 980
     }
   ],
   "annotations": [
@@ -78,6 +102,20 @@
       "y": 3580,
       "w": 660,
       "text": "Los gestos sustituyen a los botones que había, y ninguno lleva texto que lo explique:\n· la palabra se ve borrosa y se enfoca mientras se mantiene el dedo encima — al soltar se vuelve a tapar sola, así que nunca se queda destapada sobre la mesa. Cuando la ronda ya ha terminado basta un toque para dejarla a la vista;\n· arrastrar la carta a la derecha reparte una palabra nueva; a la izquierda vuelve a la anterior. En reposo no hay ninguna marca: el icono aparece desde transparente a medida que avanza el dedo;\n· el dado no tiene botón. Está ahí, flota, y se lanza con el dedo: sale en la dirección del gesto, bota y rueda hasta pararse.\n\nMientras se dibuja solo hay dos dianas, acierto y fallo. Antes había que parar el reloj primero y decidir después: el reloj se para porque ha pasado algo, no como paso aparte.\n\nLa carta está en todas las pantallas, pero solo la destapa quien va a dibujar: al equipo que no juega se le queda borrosa y sin el dedo del pictograma, porque a ese le toca adivinarla."
+    },
+    {
+      "id": "normas",
+      "x": 0,
+      "y": 4460,
+      "w": 620,
+      "text": "La última pantalla que seguía siendo un documento: título grande, párrafo y viñetas sobre fondo blanco.\nAhora es del mismo mundo —cielo, mar y el volcán de la meta asomando— y cada norma vive en un panel, no en un punto de una lista. El título son casillas, como el de la portada.\nLas dos variantes dejan de estar detrás de un interruptor y se ven a la vez: se eligen comparando, y de paso desaparece un control."
+    },
+    {
+      "id": "perdido",
+      "x": 1560,
+      "y": 5860,
+      "w": 620,
+      "text": "Hoy una dirección mal escrita o una pantalla que se cae enseñan la página en blanco de Next, que no se parece a nada del juego.\nLas dos nuevas se montan en el marco del móvil de la partida y dicen qué ha pasado con una pieza del propio juego: un poste de señales en un islote y una casilla partida por la mitad.\nEl tercer teléfono no es nuevo —son los avisos de la sala que ya están hechos— y está ahí para ver que las tres cosas son la misma familia."
     }
   ],
   "launch": {
