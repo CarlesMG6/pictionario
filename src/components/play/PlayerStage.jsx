@@ -1,12 +1,13 @@
 "use client";
 
-import RoundClock from '../ui/RoundClock';
+import { FaPeopleArrows } from 'react-icons/fa';
 import { Trophy } from '../ui/Glyphs';
 import DiceRoll from '../world/DiceRoll';
 import Countdown from './Countdown';
 import StartFlip from './StartFlip';
 import ThrowDice from './ThrowDice';
 import Verdict from './Verdict';
+import TeamAvatar from './TeamAvatar';
 import Waiting from './Waiting';
 import WordCard from './WordCard';
 
@@ -18,6 +19,12 @@ import WordCard from './WordCard';
 // La regla de fondo es que en pantalla haya una sola cosa que hacer. Lo que no
 // toca en esta fase no está apagado ni escondido detrás de una pestaña: no
 // está. Quien no tiene el turno ve la información, nunca los controles.
+//
+// La palabra es información, no control: la puede destapar cualquiera con el
+// dedo —el equipo del turno para leerla antes de dibujar, y los demás para
+// seguir el dibujo desde fuera, que es media gracia del juego—. El secreto que
+// protege el gesto es el de quien adivina, que comparte teléfono con quien
+// dibuja, y ese sigue igual: al soltar, la carta se vuelve a tapar sola.
 
 function Brand() {
   return (
@@ -59,6 +66,37 @@ function TimeStrip({ seconds, duration }) {
   );
 }
 
+// «Todos juegan» cambia la regla de la ronda y ya no se deduce de poder ver la
+// palabra —ahora la ve todo el mundo—, así que se dice con la misma chapa
+// dorada que lleva la pantalla grande.
+function AllPlay() {
+  return (
+    <div className="flex shrink-0 justify-center">
+      <span
+        className="gp-panel gp-label flex items-center gap-2 px-3.5 py-1.5 text-[0.72rem]"
+        style={{ background: '#f7c948' }}
+      >
+        <FaPeopleArrows size={15} />
+        Todos juegan
+      </span>
+    </div>
+  );
+}
+
+// A quien no le toca, en el hueco donde el equipo del turno tiene sus dianas:
+// sin controles, pero sabiendo a quién está mirando.
+function Playing({ team, color }) {
+  if (!team) return null;
+  return (
+    <div className="flex shrink-0 items-center justify-center">
+      <span className="gp-panel flex items-center gap-3 py-1.5 pl-1.5 pr-4">
+        <TeamAvatar team={team} color={color} size={38} />
+        <span className="gp-label max-w-[12rem] truncate text-[0.9rem] text-[#23222b]">{team.name}</span>
+      </span>
+    </div>
+  );
+}
+
 export default function PlayerStage({
   phase,
   word,
@@ -84,9 +122,6 @@ export default function PlayerStage({
   onThrow,
   onNewGame,
 }) {
-  // Con «todos juegan» dibujan todos los equipos a la vez, así que todos
-  // necesitan la palabra durante la ronda.
-  const canSeeWord = isMyTurn || allPlay;
   // Quién conduce la partida: siempre el equipo del turno, aunque jueguen
   // todos. Si dos móviles pudieran parar el reloj, se pisarían.
   const drives = isMyTurn;
@@ -128,15 +163,15 @@ export default function PlayerStage({
   if (phase === 'timer_starts') return wrap(<Countdown value={preCount} />);
 
   // Antes de dibujar: leer la palabra y darle la vuelta al reloj. La carta está
-  // en todas las pantallas, pero solo la destapa quien va a dibujar — al resto
-  // les tocaría adivinarla. Cambiarla y arrancar la ronda, solo el del turno.
+  // en todas las pantallas y todas la destapan; cambiarla y arrancar la ronda,
+  // solo el del turno.
   if (phase === 'play') {
     return wrap(
       <>
+        {allPlay && <AllPlay />}
         <WordCard
           word={word}
           categoryKey={categoryKey}
-          canReveal={canSeeWord}
           canSlide={drives}
           canGoBack={canGoBack}
           onSlide={onSlide}
@@ -150,27 +185,25 @@ export default function PlayerStage({
     );
   }
 
-  // Ronda en marcha o recién terminada.
+  // Ronda en marcha o recién terminada. Todos ven el reloj y la carta; lo que
+  // cambia es el pie: el equipo del turno decide el desenlace y el resto ve a
+  // quién está mirando.
   if (phase === 'timer_running' || phase === 'timer_stopped') {
-    if (!canSeeWord) {
-      return wrap(
-        <Waiting team={activeTeam} color={turnColor}>
-          <RoundClock seconds={seconds} duration={duration} size={136} />
-        </Waiting>,
-      );
-    }
     return wrap(
       <>
         <TimeStrip seconds={seconds} duration={duration} />
+        {allPlay && <AllPlay />}
         <WordCard
           word={word}
           categoryKey={categoryKey}
           stickyReveal={phase === 'timer_stopped'}
         />
-        {drives && (
+        {drives ? (
           <div className="flex shrink-0 items-center justify-center">
             <Verdict onFail={onFail} onSuccess={onSuccess} disabled={busy} />
           </div>
+        ) : (
+          <Playing team={activeTeam} color={turnColor} />
         )}
       </>,
     );

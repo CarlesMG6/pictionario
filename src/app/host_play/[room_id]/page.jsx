@@ -65,7 +65,12 @@ export default function HostPlayPage({ params }) {
   return (
     <div className="fixed inset-0 overflow-hidden bg-[#6fcdf2]">
       {board.length > 0 ? (
-        <BoardWorld seed={worldSeed} board={board} teams={pawns} />
+        <BoardWorld
+          seed={worldSeed}
+          board={board}
+          teams={pawns}
+          focusId={gameState?.current_turn_team}
+        />
       ) : (
         <div className="flex h-full flex-col items-center justify-center gap-3">
           <div className="gp-display text-3xl text-white drop-shadow-[0_3px_0_rgba(27,55,80,0.45)]">

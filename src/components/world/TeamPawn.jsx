@@ -38,7 +38,13 @@ export default function TeamPawn({ id, tiles, tileIndex, species, color, slot = 
 
   // Si la ficha desaparece a media zancada, la cámara no puede quedarse
   // siguiendo a un fantasma.
-  useEffect(() => () => motion?.current.movers.delete(id), [id, motion]);
+  useEffect(
+    () => () => {
+      motion?.current.movers.delete(id);
+      motion?.current.spots.delete(id);
+    },
+    [id, motion],
+  );
 
   useFrame((state, delta) => {
     if (!group.current || tiles.length === 0) return;
@@ -76,6 +82,9 @@ export default function TeamPawn({ id, tiles, tileIndex, species, color, slot = 
       if (dx || dz) group.current.rotation.y = Math.atan2(dx, dz);
     }
 
+    // La posición se publica siempre, se mueva o no: es de donde saca la cámara
+    // a dónde mirar mientras el equipo del turno espera su palabra.
+    motion?.current.spots.set(id, [x, ground + 0.6, z]);
     if (moving) motion?.current.movers.set(id, [x, ground + 0.6, z]);
     else motion?.current.movers.delete(id);
   });

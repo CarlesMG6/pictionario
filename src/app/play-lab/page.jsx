@@ -122,7 +122,7 @@ export default function PlayLabPage() {
 
       <div className="flex flex-col gap-5 xl:flex-row">
         <div className="relative h-[68vh] min-h-[420px] flex-1 overflow-hidden rounded-xl border-[3px] border-[#23222b] bg-[#6fcdf2]">
-          <BoardWorld seed={7} board={board} teams={pawns} />
+          <BoardWorld seed={7} board={board} teams={pawns} focusId={gameState.current_turn_team} />
           <CurrentCategory categoryKey={gameState.current_category} allPlay={allPlay} />
           <RoundStage
             phase={phase}

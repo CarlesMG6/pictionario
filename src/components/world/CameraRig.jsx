@@ -17,6 +17,11 @@ const FOLLOW_DISTANCE = 26;
 const FOLLOW_LERP = 3.2;
 const WIDE_LERP = 0.7;
 
+// Cambio de turno: la cámara cruza el mapa hasta la ficha del que entra. Va más
+// despacio que el seguimiento de un salto a propósito —es un viaje largo, y a
+// ritmo de seguimiento parecería un latigazo.
+const TRACK_LERP = 1.4;
+
 // Tras aterrizar la ficha, la cámara se queda un momento sobre ella antes de
 // abrirse. Sin esto, un salto de dos casillas dura menos que la propia
 // transición y el acercamiento no llega a completarse nunca.
@@ -30,10 +35,11 @@ const MARGIN = 1.12;
 // equipo.
 const smooth = (rate, delta) => 1 - Math.exp(-rate * delta);
 
-// La cámara tiene dos modos. Mientras una ficha se mueve, la sigue de cerca.
-// Cuando no hay ninguna moviéndose, se abre para encuadrar el mapa entero y da
-// vueltas despacio a su alrededor.
-export default function CameraRig({ bounds }) {
+// La cámara vive encima de la ficha que importa. Mientras una se mueve, la
+// sigue de cerca; cuando no se mueve ninguna se queda sobre la del turno
+// (`focusId`), orbitando despacio a su alrededor. Solo cuando no hay turno
+// —la sala antes de empezar— se abre para encuadrar el mapa entero.
+export default function CameraRig({ bounds, focusId = null }) {
   const { camera } = useThree();
   const motion = useMotionState();
 
@@ -79,10 +85,16 @@ export default function CameraRig({ bounds }) {
       hold.current -= delta;
     }
 
-    const following = moving || hold.current > 0;
-    if (following) focus.copy(held);
+    // Prioridad: lo que se mueve, luego la ficha del turno, y solo si no hay
+    // ninguna de las dos, el mapa entero.
+    const chasing = moving || hold.current > 0;
+    const spot = focusId ? motion.current.spots.get(focusId) : null;
+
+    if (chasing) focus.copy(held);
+    else if (spot) focus.set(spot[0], spot[1], spot[2]);
     else focus.set(bounds.center[0], 0.6, bounds.center[2]);
 
+    const following = chasing || Boolean(spot);
     const distance = following ? FOLLOW_DISTANCE : wideDistance();
     desired.set(
       focus.x + Math.cos(angle.current) * distance,
@@ -90,7 +102,7 @@ export default function CameraRig({ bounds }) {
       focus.z + Math.sin(angle.current) * distance,
     );
 
-    const rate = following ? FOLLOW_LERP : WIDE_LERP;
+    const rate = chasing ? FOLLOW_LERP : spot ? TRACK_LERP : WIDE_LERP;
     camera.position.lerp(desired, smooth(rate, delta));
     target.current.lerp(focus, smooth(rate, delta));
     camera.lookAt(target.current);

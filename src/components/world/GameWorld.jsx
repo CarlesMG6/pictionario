@@ -43,8 +43,10 @@ export default function GameWorld({
   target = [0, 0.6, 0],
   cameraPosition = [24, 20, 24],
   // Con `bounds` la cámara se conduce sola: sigue a la ficha que se mueve y,
-  // cuando no hay ninguna, se abre y orbita el mapa.
+  // cuando no hay ninguna, se queda sobre la del turno.
   bounds = null,
+  // Ficha a la que mirar mientras nadie se mueve: la del equipo del turno.
+  focusId = null,
 }) {
   const L = { ...LOOK, ...look };
 
@@ -83,7 +85,7 @@ export default function GameWorld({
           qué se está moviendo y dónde. */}
       <MotionProvider>
         {children}
-        {bounds && <CameraRig bounds={bounds} />}
+        {bounds && <CameraRig bounds={bounds} focusId={focusId} />}
       </MotionProvider>
 
       <EffectComposer multisampling={4}>
