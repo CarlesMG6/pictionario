@@ -95,6 +95,11 @@ export default function PlayPage({ params }) {
 
   const phase = gameState?.current_phase;
   const roundTime = typeof room?.round_time === 'number' ? room.round_time : DEFAULT_ROUND_TIME;
+  // La dificultad la manda la sala, que es de donde la leen el host y el resto
+  // de repartos. `game_state` solo guarda la copia del momento de empezar: si
+  // las dos se desincronizaran, este móvil repartiría palabras de una
+  // dificultad distinta a la del resto de la partida.
+  const difficulty = room?.difficulty || gameState?.difficulty || DEFAULT_DIFFICULTY;
 
   const myIndex = teams.findIndex((t) => t.id === team_id);
   const turnIndex = teams.findIndex((t) => t.id === gameState?.current_turn_team);
@@ -135,11 +140,7 @@ export default function PlayPage({ params }) {
       }
 
       const used = Array.isArray(gameState.used_words) ? gameState.used_words : [];
-      const next = pickWord(
-        gameState.current_category,
-        gameState.difficulty || DEFAULT_DIFFICULTY,
-        used,
-      );
+      const next = pickWord(gameState.current_category, difficulty, used);
       if (!next || next === word) return;
       setHistory((previous) => [...previous, next]);
       await updateDoc(stateRef, {
