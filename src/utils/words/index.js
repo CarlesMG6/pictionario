@@ -55,14 +55,13 @@ export const WORDS_BY_LEVEL = {
 // ajustadas para que la media de nivel que sale de verdad sea la pedida:
 //
 //   fácil    media 1,75   (campana centrada en 1,32)
-//   normal   media 3,00   (campana centrada en 3,00, simétrica)
+//   normal   media 3,33   (campana centrada en 3,38)
 //   difícil  media 4,00   (campana centrada en 4,26)
 //
-// El centro solo coincide con la media en el caso de normal, que cae justo en
-// mitad de la escala. En los otros dos, el corte en 1 y en 5 deja fuera una
-// cola que empuja la media hacia dentro, así que la campana hay que
-// desplazarla para compensar. Difícil se queda sin N1 por eso: la campana le
-// da un 0,5 %, que redondea a cero.
+// Ningún centro coincide con su media: la escala se corta en 1 y en 5, y la
+// cola que se queda fuera empuja la media hacia dentro, así que la campana hay
+// que desplazarla para compensar. Difícil se queda sin N1 por eso: la campana
+// le da un 0,5 %, que redondea a cero.
 //
 // Si se tocan, hay que rehacer la cuenta: el entero de cada nivel es el que
 // menos se aleja de la campana entre los que suman 100 y dan la media exacta.
@@ -77,7 +76,7 @@ export const DIFFICULTIES = [
     key: 'normal',
     label: 'Normal',
     description: 'Predominan escenas y conceptos con gancho visual.',
-    weights: { 1: 7, 2: 24, 3: 38, 4: 24, 5: 7 },
+    weights: { 1: 4, 2: 17, 3: 34, 4: 32, 5: 13 },
   },
   {
     key: 'dificil',
