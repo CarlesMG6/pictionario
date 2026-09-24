@@ -48,26 +48,42 @@ export const WORDS_BY_LEVEL = {
   place,
 };
 
-// Pesos por dificultad de partida. Suman 100 y determinan de qué nivel sale
-// cada palabra: fácil tira de N1-N2, normal de N3-N4, difícil de N4-N5.
+// Pesos por dificultad de partida. Suman 100, o sea que son porcentajes, y
+// determinan de qué nivel sale cada palabra.
+//
+// Los tres son campanas de Gauss de desviación 1,1 sobre la escala 1-5,
+// ajustadas para que la media de nivel que sale de verdad sea la pedida:
+//
+//   fácil    media 1,75   (campana centrada en 1,32)
+//   normal   media 3,00   (campana centrada en 3,00, simétrica)
+//   difícil  media 4,00   (campana centrada en 4,26)
+//
+// El centro solo coincide con la media en el caso de normal, que cae justo en
+// mitad de la escala. En los otros dos, el corte en 1 y en 5 deja fuera una
+// cola que empuja la media hacia dentro, así que la campana hay que
+// desplazarla para compensar. Difícil se queda sin N1 por eso: la campana le
+// da un 0,5 %, que redondea a cero.
+//
+// Si se tocan, hay que rehacer la cuenta: el entero de cada nivel es el que
+// menos se aleja de la campana entre los que suman 100 y dan la media exacta.
 export const DIFFICULTIES = [
   {
     key: 'facil',
     label: 'Fácil',
     description: 'Sobre todo palabras icónicas y concretas.',
-    weights: { 1: 40, 2: 35, 3: 17, 4: 6, 5: 2 },
+    weights: { 1: 45, 2: 38, 3: 14, 4: 3, 5: 0 },
   },
   {
     key: 'normal',
     label: 'Normal',
     description: 'Predominan escenas y conceptos con gancho visual.',
-    weights: { 1: 8, 2: 17, 3: 33, 4: 30, 5: 12 },
+    weights: { 1: 7, 2: 24, 3: 38, 4: 24, 5: 7 },
   },
   {
     key: 'dificil',
     label: 'Difícil',
     description: 'Sobre todo abstracciones, modismos y términos raros.',
-    weights: { 1: 2, 2: 5, 3: 15, 4: 40, 5: 38 },
+    weights: { 1: 0, 2: 6, 3: 21, 4: 40, 5: 33 },
   },
 ];
 

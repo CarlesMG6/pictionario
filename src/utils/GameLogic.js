@@ -75,6 +75,7 @@ export class GameLogic {
             return {
                 ...seat,
                 position: 0,
+                locked: true,
                 ready: true,
                 icon_url: icon,
                 name: seat.name || label || seatLabel(index),

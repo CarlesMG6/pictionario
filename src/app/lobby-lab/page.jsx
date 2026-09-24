@@ -4,6 +4,7 @@ import { useState } from 'react';
 import HostLobbyScreen from '../../components/lobby/HostLobbyScreen';
 import PhoneLobbyScreen from '../../components/lobby/PhoneLobbyScreen';
 import { DEFAULT_CONFIG, STAGES } from '../../utils/RoomLogic';
+import { ANIMAL_CHOICES } from '../../game/animals';
 
 // Banco de pruebas de la sala, al lado de /play-lab y /world-lab: las dos
 // pantallas de cada fase, sin Firestore y sin tener que reunir tres móviles
@@ -25,9 +26,9 @@ const ROLES = [
 ];
 
 const INITIAL_TEAMS = [
-  { id: 'a', name: 'Delfines', icon_url: '/player-icons/dolphin2.png', ready: true, position: 0 },
-  { id: 'b', name: null, icon_url: null, ready: false, position: 0 },
-  { id: 'c', name: 'Dragones', icon_url: '/player-icons/dragon2.png', ready: false, position: 0 },
+  { id: 'a', name: 'Delfines', icon_url: '/player-icons/dolphin2.png', locked: true, ready: true, position: 0 },
+  { id: 'b', name: null, icon_url: '/player-icons/crab2.png', locked: false, ready: false, position: 0 },
+  { id: 'c', name: null, icon_url: '/player-icons/dragon2.png', locked: true, ready: false, position: 0 },
 ];
 
 export default function LobbyLabPage() {
@@ -73,7 +74,16 @@ export default function LobbyLabPage() {
           onClick={() =>
             setTeams((previous) => [
               ...previous,
-              { id: crypto.randomUUID(), name: null, icon_url: null, ready: false, position: 0 },
+              {
+                id: crypto.randomUUID(),
+                name: null,
+                icon_url: ANIMAL_CHOICES.find(
+                  (c) => !previous.some((t) => t.icon_url === c.icon),
+                )?.icon || null,
+                locked: false,
+                ready: false,
+                position: 0,
+              },
             ])
           }
         >
@@ -101,9 +111,21 @@ export default function LobbyLabPage() {
             onContinue={() => setStage(STAGES.SETUP)}
             onConfig={(patch) => setConfig((previous) => ({ ...previous, ...patch }))}
             onToRoster={() => setStage(STAGES.ROSTER)}
-            onPick={(choice) => patchMe({ icon_url: choice.icon, name: me.name || choice.label })}
-            onName={(name) => patchMe({ name })}
-            onReady={(ready) => patchMe({ ready })}
+            onCycle={(direction) => {
+              const taken = teams.filter((t) => t.id !== me.id).map((t) => t.icon_url);
+              const from = ANIMAL_CHOICES.findIndex((c) => c.icon === me.icon_url);
+              const total = ANIMAL_CHOICES.length;
+              for (let step = 1; step <= total; step += 1) {
+                const choice = ANIMAL_CHOICES[(((from + direction * step) % total) + total) % total];
+                if (!taken.includes(choice.icon)) return patchMe({ icon_url: choice.icon });
+              }
+              return undefined;
+            }}
+            onLock={(value = true) =>
+              patchMe(value === false ? { locked: false, ready: false } : { locked: true })}
+            onName={(name) => patchMe({ name, ready: true })}
+            onReady={(ready) => patchMe(ready ? { ready: true } : { ready: false, locked: false })}
+            onKick={(id) => setTeams((previous) => previous.filter((team) => team.id !== id))}
             onStart={() => setStage(STAGES.LOBBY)}
           />
         </div>

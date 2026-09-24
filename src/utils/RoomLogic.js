@@ -1,6 +1,7 @@
 import { db } from '../firebaseClient.js';
 import { collection, doc, getDocs, query, runTransaction, updateDoc, where } from 'firebase/firestore';
 import { DEFAULT_DIFFICULTY } from './CategoryWords';
+import { ANIMAL_CHOICES } from '../game/animals';
 import { TEAM_COLORS } from '../components/hud/teamColors';
 
 // Antes de la partida la sala pasa por tres pantallas, y las dos que hay
@@ -91,19 +92,51 @@ export async function updateSeat(room_id, team_id, patch) {
   }));
 }
 
-// La criatura es exclusiva, y quién se la lleva se decide dentro de la
-// transacción: dos dedos a la vez sobre el mismo delfín no pueden ganar los dos.
-export async function pickAnimal(room_id, team_id, icon, label) {
+// Reparte criatura a quien no la tenga. Se llama al entrar en la fase de
+// criaturas: así la pantalla grande las enseña todas desde el primer segundo y
+// nadie tiene que elegir desde cero, solo cambiar la que le ha tocado.
+export async function dealAnimals(room_id) {
   return withTeams(room_id, (teams) => {
-    if (teams.some((team) => team.id !== team_id && team.icon_url === icon)) {
-      return { teams, value: false };
-    }
+    const taken = new Set(teams.map((team) => team.icon_url).filter(Boolean));
+    const free = ANIMAL_CHOICES.filter((choice) => !taken.has(choice.icon));
+
     return {
-      teams: teams.map((team) => (
-        team.id === team_id ? { ...team, icon_url: icon, name: team.name || label } : team
-      )),
+      teams: teams.map((team) => {
+        if (team.icon_url || free.length === 0) return team;
+        const [choice] = free.splice(Math.floor(Math.random() * free.length), 1);
+        return { ...team, icon_url: choice.icon };
+      }),
       value: true,
     };
+  });
+}
+
+// Pasar a la criatura siguiente o a la anterior, saltándose las que ya lleva
+// otro equipo. Va en transacción como todo lo que toca el array: dos flechas a
+// la vez sobre el mismo delfín no pueden ganar las dos.
+export async function cycleAnimal(room_id, team_id, direction = 1) {
+  return withTeams(room_id, (teams) => {
+    const me = teams.find((team) => team.id === team_id);
+    if (!me) return null;
+
+    const taken = new Set(
+      teams.filter((team) => team.id !== team_id).map((team) => team.icon_url).filter(Boolean),
+    );
+    const from = ANIMAL_CHOICES.findIndex((choice) => choice.icon === me.icon_url);
+    const total = ANIMAL_CHOICES.length;
+
+    for (let step = 1; step <= total; step += 1) {
+      const index = (((from + direction * step) % total) + total) % total;
+      const choice = ANIMAL_CHOICES[index];
+      if (taken.has(choice.icon)) continue;
+      return {
+        teams: teams.map((team) => (team.id === team_id ? { ...team, icon_url: choice.icon } : team)),
+        value: choice.icon,
+      };
+    }
+
+    // Sala llena de criaturas: no hay ninguna libre a la que saltar.
+    return { teams, value: me.icon_url };
   });
 }
 

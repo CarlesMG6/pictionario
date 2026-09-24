@@ -8,13 +8,15 @@ import { GameLogic } from '../../../utils/GameLogic';
 import {
   STAGES,
   configOf,
+  cycleAnimal,
+  dealAnimals,
   findRoomByCode,
   forgetSeat,
   isLeader,
   joinSeat,
-  pickAnimal,
   recallSeat,
   rememberSeat,
+  removeSeat,
   setStage,
   updateConfig,
   updateSeat,
@@ -81,6 +83,14 @@ function JoinClient({ code }) {
   const stage = room?.stage || (room?.playing ? STAGES.PLAYING : STAGES.LOBBY);
   const myIndex = teams.findIndex((team) => team.id === teamId);
   const me = myIndex >= 0 ? teams[myIndex] : null;
+
+  // Quien llega a la fase de criaturas sin una puesta —porque ha entrado
+  // después del reparto— se lleva la suya en cuanto abre la pantalla.
+  useEffect(() => {
+    if (stage === STAGES.ROSTER && roomUuid && me && !me.icon_url) {
+      dealAnimals(roomUuid);
+    }
+  }, [stage, roomUuid, me]);
 
   // Cuando la partida arranca, el móvil deja de ser el mando de la sala.
   useEffect(() => {
@@ -159,11 +169,19 @@ function JoinClient({ code }) {
       // Cada toque se guarda en el momento: es lo que convierte la pantalla
       // grande en un espejo de lo que P1 está haciendo con el dedo.
       onConfig={(patch) => updateConfig(roomUuid, patch)}
-      onToRoster={run(() => setStage(roomUuid, STAGES.ROSTER))}
-      onPick={(choice) => pickAnimal(roomUuid, teamId, choice.icon, choice.label)}
-      onName={(name) => updateSeat(roomUuid, teamId, { name })}
-      onReady={(ready) => updateSeat(roomUuid, teamId, { ready })}
+      // Al pasar a criaturas todo el mundo recibe la suya, y así la pantalla
+      // grande las enseña desde el primer segundo.
+      onToRoster={run(async () => {
+        await dealAnimals(roomUuid);
+        await setStage(roomUuid, STAGES.ROSTER);
+      })}
+      onCycle={(direction) => cycleAnimal(roomUuid, teamId, direction)}
+      onLock={(value = true) =>
+        updateSeat(roomUuid, teamId, value === false ? { locked: false, ready: false } : { locked: true })}
+      onName={(name) => updateSeat(roomUuid, teamId, { name, ready: true })}
+      onReady={(ready) => updateSeat(roomUuid, teamId, ready ? { ready: true } : { ready: false, locked: false })}
       onStart={run(() => GameLogic.startGame(roomUuid))}
+      onKick={(id) => removeSeat(roomUuid, id)}
     />
   );
 }

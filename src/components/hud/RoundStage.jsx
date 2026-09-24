@@ -3,7 +3,6 @@
 import RoundClock from '../ui/RoundClock';
 import { Check, Cross, FlickHint } from '../ui/Glyphs';
 import DiceRoll from '../world/DiceRoll';
-import TeamBadge from './TeamBadge';
 import { teamColor } from './teamColors';
 
 // El narrador de la pantalla grande. En cada fase la sala tiene que saber una
@@ -45,20 +44,16 @@ export default function RoundStage({ phase, teams, gameState, round, dice }) {
   // Turno resuelto y ficha en movimiento: el escenario se aparta para que se vea
   // saltar al peón, que es lo único que importa en ese segundo.
   if (phase === 'dice_rolling' && !dice?.rolling) return null;
-  if (!['play', 'timer_starts', 'timer_running', 'timer_stopped', 'dice', 'dice_rolling'].includes(phase)) {
+  // La fase de palabra no monta escenario: mientras el equipo lee su carta, el
+  // mundo se ve entero y quién juega lo dice su tarjeta de la barra de abajo,
+  // que se levanta y crece. Un retrato gigante en el centro tapaba el tablero
+  // para repetir un dato que ya estaba en pantalla.
+  if (!['timer_starts', 'timer_running', 'timer_stopped', 'dice', 'dice_rolling'].includes(phase)) {
     return null;
   }
 
   const stage = (() => {
     switch (phase) {
-      // Esperando a que el equipo lea la palabra y arranque la ronda.
-      case 'play':
-        return (
-          <div className="gp-pop flex flex-col items-center">
-            <TeamBadge team={team} color={color} size={148} />
-          </div>
-        );
-
       // Preparados: 3 · 2 · 1. Es la única fase que sí tapa el mundo, porque
       // dura tres segundos y todo el mundo tiene que mirar a la vez.
       case 'timer_starts':

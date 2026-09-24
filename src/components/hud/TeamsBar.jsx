@@ -7,7 +7,9 @@ const ORDINALS = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º'];
 
 // Barra inferior de equipos: la figura del jugador a la izquierda, fuera de la
 // tarjeta y pisándola, y a su derecha la ficha con los datos. La del líder se
-// eleva y la del turno en curso se marca con una banda superior.
+// eleva un poco y la del **turno en curso crece y se levanta de verdad**: es el
+// único sitio donde la sala mira para saber a quién le toca, así que tiene que
+// ganarse el sitio sin necesidad de un retrato en mitad del tablero.
 export default function TeamsBar({ teams, currentTeamId, totalTiles }) {
   const portraits = useAnimalPortraits(teams);
 
@@ -30,8 +32,9 @@ export default function TeamsBar({ teams, currentTeamId, totalTiles }) {
           <div
             key={team.id}
             className={`relative flex items-end transition-transform duration-300 ${
-              isTurn ? '-translate-y-3 scale-[1.06]' : rank === 1 ? '-translate-y-1.5' : ''
+              isTurn ? 'z-10 -translate-y-6 scale-[1.22]' : rank === 1 ? '-translate-y-1.5' : ''
             }`}
+            style={{ transformOrigin: 'bottom center' }}
           >
             {/* La figura vive fuera de la tarjeta y se apoya sobre su borde. */}
             <div className="relative z-10 -mr-5 mb-[-6px] flex h-[108px] w-[96px] items-end justify-center">
@@ -46,7 +49,11 @@ export default function TeamsBar({ teams, currentTeamId, totalTiles }) {
 
             <div
               className="gp-panel relative overflow-hidden pl-9 pr-4 pt-2.5 pb-2.5"
-              style={isTurn ? { boxShadow: `0 5px 0 rgba(35,34,43,0.4), 0 0 0 4px ${color}55` } : undefined}
+              style={
+                isTurn
+                  ? { boxShadow: `0 5px 0 rgba(35,34,43,0.4), 0 0 0 5px ${color}, 0 0 0 9px ${color}44` }
+                  : { opacity: 0.86 }
+              }
             >
               {/* Banda del color del equipo; se ilumina entera en su turno. */}
               <div

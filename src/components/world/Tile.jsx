@@ -10,7 +10,7 @@ export const BASE_HEIGHT = 0.16;
 export const TILE_TOP = BASE_HEIGHT + TILE_HEIGHT;
 
 // Las dos revoluciones son idénticas en todas las casillas del juego, así que
-// se construyen una vez y se comparten: el tablero de una partida larga son 55
+// se construyen una vez y se comparten: el tablero de una partida larga son 35
 // casillas, y el título de la portada otras once.
 let cached = null;
 

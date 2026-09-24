@@ -4,7 +4,8 @@ import { useState } from 'react';
 import PlayerFrame from '../play/PlayerFrame';
 import { readableOn, teamColor } from '../hud/teamColors';
 import { STAGES, seatLabel } from '../../utils/RoomLogic';
-import AnimalPicker, { AnimalCrest } from './AnimalPicker';
+import { ANIMAL_CHOICES } from '../../game/animals';
+import AnimalCarousel, { AnimalCrest } from './AnimalPicker';
 import { CategoryPicker, DifficultyPicker, DurationPicker, Section, Stepper } from './ConfigControls';
 import { CategoryLegend, ConfigSummary } from './ConfigSummary';
 import { SeatChips } from './Seats';
@@ -27,10 +28,12 @@ export default function PhoneLobbyScreen({
   onContinue,
   onConfig,
   onToRoster,
-  onPick,
+  onCycle,
+  onLock,
   onName,
   onReady,
   onStart,
+  onKick,
 }) {
   const color = teamColor(myIndex);
 
@@ -51,6 +54,7 @@ export default function PhoneLobbyScreen({
           isLeader={isLeader}
           busy={busy}
           onContinue={onContinue}
+          onKick={isLeader ? onKick : null}
         />
       )}
 
@@ -69,7 +73,8 @@ export default function PhoneLobbyScreen({
           color={color}
           isLeader={isLeader}
           busy={busy}
-          onPick={onPick}
+          onCycle={onCycle}
+          onLock={onLock}
           onName={onName}
           onReady={onReady}
           onStart={onStart}
@@ -81,7 +86,7 @@ export default function PhoneLobbyScreen({
 
 // --- Entrada ---------------------------------------------------------------
 
-function LobbyStage({ teams, me, myIndex, color, isLeader, busy, onContinue }) {
+function LobbyStage({ teams, me, myIndex, color, isLeader, busy, onContinue, onKick }) {
   return (
     <div className="flex flex-1 flex-col items-center gap-6 px-5 pb-5 pt-10">
       <div className="flex flex-col items-center gap-4">
@@ -96,7 +101,7 @@ function LobbyStage({ teams, me, myIndex, color, isLeader, busy, onContinue }) {
         <span className="gp-label text-base text-[#23222b]">Estás dentro</span>
       </div>
 
-      <SeatChips teams={teams} meId={me?.id} />
+      <SeatChips teams={teams} meId={me?.id} onKick={onKick} />
 
       {isLeader ? (
         <button
@@ -183,103 +188,122 @@ function SetupMirror({ config }) {
 
 // --- Criatura y nombre -----------------------------------------------------
 
-function RosterStage({ teams, me, color, isLeader, busy, onPick, onName, onReady, onStart }) {
-  // El borrador solo existe si se ha escrito: mientras no se toque, el nombre es
-  // el que tenga la sala —el de la criatura recién elegida— y así elegir delfín
-  // y no escribir nada deja el equipo llamado Delfines sin un paso más.
+function RosterStage({ teams, me, color, isLeader, busy, onCycle, onLock, onName, onReady, onStart }) {
+  // El nombre se propone a partir de la criatura y solo pisa esa propuesta lo
+  // que se escriba: elegir delfín y darle a listo deja el equipo llamado
+  // Delfines sin un paso más.
   const [draft, setDraft] = useState(null);
-  const name = draft ?? (me?.name || '');
+  const suggested = ANIMAL_CHOICES.find((choice) => choice.icon === me?.icon_url)?.label || '';
+  const name = draft ?? me?.name ?? suggested;
+
+  const locked = Boolean(me?.locked);
   const ready = Boolean(me?.ready);
   const readyCount = teams.filter((team) => team.ready).length;
 
   const commit = () => {
     const value = name.trim().slice(0, 20);
-    if (value && value !== me?.name) onName(value);
+    onName(value || suggested);
   };
 
-  if (ready) {
+  // 1 · Pasar criaturas. Lo que se ve aquí es lo mismo que la sala está viendo
+  // en la pantalla grande, así que la elección se hace mirando a la tele.
+  if (!locked) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-5 py-7">
-        <AnimalCrest icon={me?.icon_url} color={color} size={140} />
-        <div className="gp-label text-xl text-[#23222b]">{me?.name}</div>
-
-        {isLeader && readyCount >= 2 ? (
-          <button
-            type="button"
-            onClick={onStart}
-            disabled={busy}
-            className="gp-button w-full py-5 text-lg disabled:opacity-70"
-            style={{ background: 'var(--w-gold)', color: 'var(--w-ink)' }}
-          >
-            Empezar partida
-          </button>
-        ) : (
-          <span className="gp-label text-center text-sm text-[#23222b] opacity-70">
-            {isLeader ? 'Faltan equipos por estar listos' : 'Esperando a los demás'}
-          </span>
-        )}
+      <div className="flex flex-1 flex-col items-center justify-center gap-8 px-5 pb-5 pt-6">
+        <AnimalCarousel icon={me?.icon_url} color={color} busy={busy} onCycle={onCycle} />
 
         <button
           type="button"
-          onClick={() => onReady(false)}
-          className="gp-caption underline"
-          style={{ color: 'var(--w-ink)' }}
+          onClick={() => {
+            setDraft(null);
+            onLock();
+          }}
+          disabled={busy}
+          className="gp-button mt-auto w-full py-5 text-lg disabled:opacity-70"
+          style={{ background: 'var(--w-gold)', color: 'var(--w-ink)' }}
         >
-          Cambiar criatura
+          Me quedo esta
         </button>
       </div>
     );
   }
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-3">
-        <div className="flex flex-col items-center gap-3">
-          <AnimalCrest icon={me?.icon_url} color={color} size={120} />
-          <input
-            value={name}
-            onChange={(event) => setDraft(event.target.value)}
-            onBlur={commit}
-            placeholder="Nombre del equipo"
-            maxLength={20}
-            className="gp-label w-full rounded-lg border-[3px] px-3 py-2.5 text-center text-base outline-none"
-            style={{ borderColor: 'var(--w-ink)', background: '#fff', color: 'var(--w-ink)' }}
-          />
-        </div>
+  // 2 · El nombre, con la criatura ya puesta delante para saber a quién se lo
+  // estás poniendo.
+  if (!ready) {
+    return (
+      <div className="flex flex-1 flex-col items-center gap-6 px-5 pb-5 pt-8">
+        <AnimalCrest icon={me?.icon_url} color={color} size={132} />
 
-        <div className="mt-4">
-          <AnimalPicker
-            teams={teams}
-            meId={me?.id}
-            value={me?.icon_url}
-            onPick={(choice) => {
-              setDraft(null);
-              onPick(choice);
-            }}
-          />
-        </div>
-      </div>
+        <input
+          value={name}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur();
+          }}
+          enterKeyHint="done"
+          placeholder="Nombre del equipo"
+          maxLength={20}
+          className="gp-label w-full rounded-lg border-[3px] px-3 py-3 text-center text-lg outline-none"
+          style={{ borderColor: 'var(--w-ink)', background: '#fff', color: 'var(--w-ink)' }}
+        />
 
-      <div className="shrink-0 px-4 pb-4">
-        {me?.icon_url ? (
+        <div className="mt-auto flex w-full flex-col items-center gap-3">
           <button
             type="button"
-            onClick={() => {
-              commit();
-              onReady(true);
-            }}
+            onClick={commit}
             disabled={busy}
-            className="gp-button w-full py-4 text-lg disabled:opacity-70"
+            className="gp-button w-full py-5 text-lg disabled:opacity-70"
             style={{ background: 'var(--w-gold)', color: 'var(--w-ink)' }}
           >
             Listo
           </button>
-        ) : (
-          <span className="gp-label block py-4 text-center text-sm text-[#23222b] opacity-70">
-            Elige tu criatura
-          </span>
-        )}
+          <button
+            type="button"
+            onClick={() => onLock(false)}
+            className="gp-caption underline"
+            style={{ color: 'var(--w-ink)' }}
+          >
+            Cambiar criatura
+          </button>
+        </div>
       </div>
+    );
+  }
+
+  // 3 · Hecho: solo queda esperar, o empezar si llevas los mandos.
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-5 py-7">
+      <AnimalCrest icon={me?.icon_url} color={color} size={140} />
+      <div className="gp-label text-xl text-[#23222b]">{me?.name}</div>
+
+      {isLeader && readyCount >= 2 ? (
+        <button
+          type="button"
+          onClick={onStart}
+          disabled={busy}
+          className="gp-button w-full py-5 text-lg disabled:opacity-70"
+          style={{ background: 'var(--w-gold)', color: 'var(--w-ink)' }}
+        >
+          Empezar partida
+        </button>
+      ) : (
+        <span className="gp-label text-center text-sm text-[#23222b] opacity-70">
+          {isLeader ? 'Faltan equipos por estar listos' : 'Esperando a los demás'}
+        </span>
+      )}
+
+      <button
+        type="button"
+        onClick={() => {
+          setDraft(null);
+          onReady(false);
+        }}
+        className="gp-caption underline"
+        style={{ color: 'var(--w-ink)' }}
+      >
+        Cambiar criatura
+      </button>
     </div>
   );
 }

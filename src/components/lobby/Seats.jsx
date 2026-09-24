@@ -80,6 +80,10 @@ export function PlayerCard({ index, team, width = 200 }) {
   const portrait = useAnimalPortrait(team?.icon_url);
   const figure = team?.icon_url ? portrait || team.icon_url : null;
 
+  // Tres estados, y el pie de la tarjeta es quien los cuenta: mientras pasa
+  // criaturas no hay nombre que enseñar, y cuando lo hay es que ya está listo.
+  const caption = team?.ready ? team.name : team?.locked ? 'Poniendo nombre…' : 'Eligiendo…';
+
   return (
     <div className="flex flex-col items-center" style={{ width }}>
       <div className="relative z-10 -mb-5 flex h-[104px] w-[104px] items-end justify-center">
@@ -92,8 +96,7 @@ export function PlayerCard({ index, team, width = 200 }) {
           />
         ) : (
           // El pedestal vacío va relleno: un contorno punteado sobre el mundo a
-          // todo color no se ve desde el sofá, y es justo el hueco que hay que
-          // notar para saber que falta alguien por elegir.
+          // todo color no se ve desde el sofá.
           <div
             className="mb-2 flex h-[76px] w-[76px] items-center justify-center rounded-full border-[3px] border-dashed"
             style={{ borderColor: 'var(--w-ink)', background: 'rgba(253,246,232,0.8)' }}
@@ -106,38 +109,52 @@ export function PlayerCard({ index, team, width = 200 }) {
       <div className="gp-panel relative w-full overflow-hidden px-3 py-2.5 text-center">
         <div className="absolute inset-x-0 top-0 h-2.5" style={{ background: color }} />
         <div className="gp-caption mt-1.5">{seatLabel(index)}</div>
-        <div className="gp-label mt-0.5 truncate text-[0.95rem]">
-          {team?.name || 'Eligiendo…'}
+        {/* El nombre va a tamaño de nombre; los dos estados de paso, más
+            pequeños, que si no «poniendo nombre» se corta a la mitad. */}
+        <div
+          className={`gp-label mt-0.5 truncate ${team?.ready ? 'text-[0.95rem]' : 'text-[0.78rem] opacity-50'}`}
+        >
+          {caption}
         </div>
-        {team?.ready && (
-          <div className="gp-caption mt-1" style={{ color: 'var(--w-green)', opacity: 1 }}>
-            Listo
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-// Chapas del móvil: quién más está dentro, con la propia resaltada.
-export function SeatChips({ teams = [], meId = null }) {
+// Chapas del móvil: quién más está dentro, con la propia resaltada. Con
+// `onKick` —solo lo recibe P1— cada chapa ajena lleva su aspa: un móvil que
+// entra por error ocupa una plaza y, si no, se queda dentro hasta el final.
+export function SeatChips({ teams = [], meId = null, onKick = null }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-2">
       {teams.map((team, index) => {
         const color = teamColor(index);
         const mine = team.id === meId;
+        const name = team.name || seatLabel(index);
         return (
           <span
             key={team.id}
-            className="gp-label flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.68rem]"
+            className="gp-label flex items-center gap-1.5 rounded-full py-1 pl-2.5 text-[0.68rem]"
             style={{
               background: mine ? color : 'rgba(253,246,232,0.9)',
               color: mine ? readableOn(color) : 'var(--w-ink)',
               border: `3px solid ${mine ? 'var(--w-ink)' : 'rgba(35,34,43,0.22)'}`,
+              paddingRight: onKick && !mine ? 2 : 10,
             }}
           >
             {!mine && <i className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />}
-            {team.name || seatLabel(index)}
+            {name}
+            {onKick && !mine && (
+              <button
+                type="button"
+                onClick={() => onKick(team.id)}
+                aria-label={`Quitar a ${name}`}
+                className="ml-0.5 flex h-6 w-6 items-center justify-center rounded-full text-base leading-none"
+                style={{ background: 'rgba(35,34,43,0.1)', color: 'var(--w-ink)' }}
+              >
+                ×
+              </button>
+            )}
           </span>
         );
       })}

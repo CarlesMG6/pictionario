@@ -2,23 +2,28 @@
 
 import { ANIMAL_CHOICES } from '../../game/animals';
 import { useAnimalPortrait } from '../hud/animalPortrait';
-import { teamColor } from '../hud/teamColors';
 
-// Elegir criatura es elegir el peón que se va a ver en el tablero, así que la
-// que ya se ha llevado otro equipo no está disponible: dos peones iguales en el
-// mundo serían dos equipos indistinguibles desde el sofá.
+// Elegir criatura no es abrir un catálogo: al entrar en la fase ya se tiene una
+// puesta y desde aquí se pasa a la siguiente o a la anterior, como quien gira
+// un expositor. Lo que se toca es la criatura que la sala está viendo en la
+// pantalla grande, así que el móvil enseña exactamente lo mismo que ellos.
 //
-// La rejilla va con los iconos planos, que son instantáneos; la figura de
-// arcilla —la de verdad, la que se verá en la isla— se reserva para la que se
-// tiene elegida, que es la que hay que reconocer.
+// Las que llevan otros equipos no aparecen: las flechas se las saltan, y así no
+// hay forma de elegir una que ya está cogida.
 
-export function AnimalCrest({ icon, color, size = 128 }) {
+export function AnimalCrest({ icon, color, size = 128, dim = false }) {
   const portrait = useAnimalPortrait(icon);
 
   return (
     <span
-      className="flex items-center justify-center rounded-full border-[3px] border-[#23222b]"
-      style={{ width: size, height: size, background: color, boxShadow: '0 5px 0 rgba(35,34,43,0.35)' }}
+      className="flex items-center justify-center rounded-full border-[3px] border-[#23222b] transition-opacity"
+      style={{
+        width: size,
+        height: size,
+        background: color,
+        boxShadow: '0 5px 0 rgba(35,34,43,0.35)',
+        opacity: dim ? 0.55 : 1,
+      }}
     >
       {icon ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -30,48 +35,44 @@ export function AnimalCrest({ icon, color, size = 128 }) {
   );
 }
 
-export default function AnimalPicker({ teams = [], meId = null, value = null, onPick }) {
-  // Quién lleva cada criatura, para pintar el punto de color de su dueño.
-  const owner = new Map();
-  teams.forEach((team, index) => {
-    if (team.icon_url) owner.set(team.icon_url, { id: team.id, color: teamColor(index) });
-  });
+export default function AnimalCarousel({ icon, color, busy = false, onCycle }) {
+  const label = ANIMAL_CHOICES.find((choice) => choice.icon === icon)?.label || '';
 
   return (
-    <div className="grid grid-cols-5 gap-2">
-      {ANIMAL_CHOICES.map((choice) => {
-        const taken = owner.get(choice.icon);
-        const mine = value === choice.icon;
-        const blocked = Boolean(taken) && taken.id !== meId;
-
-        return (
-          <button
-            key={choice.icon}
-            type="button"
-            onClick={() => !blocked && onPick(choice)}
-            aria-label={choice.label}
-            aria-pressed={mine}
-            className="relative flex aspect-square items-center justify-center rounded-lg border-[3px]"
-            style={{
-              borderColor: mine ? 'var(--w-ink)' : 'rgba(35,34,43,0.22)',
-              background: mine ? 'var(--w-gold)' : '#fff',
-              boxShadow: mine ? '0 4px 0 rgba(35,34,43,0.4)' : 'none',
-              opacity: blocked ? 0.34 : 1,
-              filter: blocked ? 'grayscale(1)' : 'none',
-              cursor: blocked ? 'default' : 'pointer',
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={choice.icon} alt="" className="h-[80%] w-[80%] object-contain" />
-            {blocked && (
-              <i
-                className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border-2 border-[#23222b]"
-                style={{ background: taken.color }}
-              />
-            )}
-          </button>
-        );
-      })}
+    <div className="flex flex-col items-center gap-3">
+      <div className="flex items-center gap-4">
+        <Arrow direction={-1} disabled={busy} onClick={() => onCycle(-1)} />
+        <AnimalCrest icon={icon} color={color} size={152} dim={busy} />
+        <Arrow direction={1} disabled={busy} onClick={() => onCycle(1)} />
+      </div>
+      <span className="gp-label text-base text-[#23222b]">{label}</span>
     </div>
+  );
+}
+
+function Arrow({ direction, disabled, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={direction > 0 ? 'Siguiente criatura' : 'Criatura anterior'}
+      className="gp-button flex h-14 w-14 flex-none items-center justify-center disabled:opacity-60"
+      style={{ background: 'var(--w-paper)', color: 'var(--w-ink)', borderRadius: 999 }}
+    >
+      <svg
+        width="26"
+        height="26"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ transform: direction > 0 ? 'none' : 'scaleX(-1)' }}
+      >
+        <path d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
   );
 }
